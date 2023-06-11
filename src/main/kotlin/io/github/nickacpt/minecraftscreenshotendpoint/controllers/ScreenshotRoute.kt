@@ -6,7 +6,6 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -107,7 +106,7 @@ private suspend fun getScreenshot(data: ScreenshotData): ByteArray {
 }
 
 
-suspend fun takeScreenshot(framebuffer: Framebuffer, oldFramebuffer: Framebuffer): NativeImage {
+suspend fun takeScreenshot(framebuffer: Framebuffer): NativeImage {
     val w = framebuffer.textureWidth
     val h = framebuffer.textureHeight
     val nativeImage = NativeImage(w, h, false)
@@ -115,8 +114,6 @@ suspend fun takeScreenshot(framebuffer: Framebuffer, oldFramebuffer: Framebuffer
     withContext(renderCallDispatcher) {
         RenderSystem.bindTexture(framebuffer.colorAttachment)
         nativeImage.loadFromTextureImage(0, true)
-
-        oldFramebuffer.beginWrite(true)
     }
 
     nativeImage.mirrorVertically()
@@ -145,18 +142,18 @@ private suspend fun MinecraftClient.takeScreenshot(x: Double, y: Double, z: Doub
         SimpleFramebuffer(width, height, true, IS_SYSTEM_MAC).also {
             it.beginWrite(false)
             gameRenderer.renderWorld(1.0f, 0L, MatrixStack())
+
+            // Reset everything
+            fovOverwritable.fovOverwrite = null
+
+            setCameraEntity(oldCameraEntity)
+            gameRenderer.setBlockOutlineEnabled(true)
+
+            //oldFramebuffer.beginWrite(true)
         }
     }
 
-    val img = takeScreenshot(framebuffer, oldFramebuffer)
-
-    // Reset everything
-    fovOverwritable.fovOverwrite = null
-
-    setCameraEntity(oldCameraEntity)
-    gameRenderer.setBlockOutlineEnabled(true)
-
-    this.worldRenderer.reloadTransparencyPostProcessor()
+    val img = takeScreenshot(framebuffer)
 
     val result = img.bytes
     img.close()
