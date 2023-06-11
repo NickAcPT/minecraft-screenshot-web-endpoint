@@ -6,17 +6,19 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
 import net.minecraft.client.MinecraftClient
 import net.minecraft.client.MinecraftClient.IS_SYSTEM_MAC
+import net.minecraft.client.gl.Framebuffer
 import net.minecraft.client.gl.SimpleFramebuffer
 import net.minecraft.client.recipebook.ClientRecipeBook
-import net.minecraft.client.util.ScreenshotRecorder
+import net.minecraft.client.texture.NativeImage
 import net.minecraft.client.util.math.MatrixStack
 import net.minecraft.stat.StatHandler
-import java.nio.file.Files
 import java.util.concurrent.Executor
 
 data class ScreenshotData(
@@ -62,7 +64,9 @@ fun Application.screenshotRoute() {
 
                 call.respondBytes {
                     semaphore.withPermit {
-                        getScreenshot(data)
+                        withContext(Dispatchers.IO) {
+                            getScreenshot(data)
+                        }
                     }
                 }
             }.onFailure {
@@ -86,33 +90,39 @@ private suspend fun getScreenshot(data: ScreenshotData): ByteArray {
         throw IllegalStateException("World is null")
     }
 
-    return withContext(renderCallDispatcher) {
-        MinecraftClient.getInstance().takeScreenshot(
-                data.x,
-                data.y,
-                data.z,
-                data.pitch,
-                data.yaw,
-                data.width,
-                data.height,
-                data.fov
-        )
+    return MinecraftClient.getInstance().takeScreenshot(
+            data.x,
+            data.y,
+            data.z,
+            data.pitch,
+            data.yaw,
+            data.width,
+            data.height,
+            data.fov
+    )
+}
+
+
+suspend fun takeScreenshot(framebuffer: Framebuffer): NativeImage {
+    val w = framebuffer.textureWidth
+    val h = framebuffer.textureHeight
+    val nativeImage = NativeImage(w, h, false)
+
+    withContext(renderCallDispatcher) {
+        RenderSystem.bindTexture(framebuffer.colorAttachment)
+        nativeImage.loadFromTextureImage(0, true)
     }
+
+    nativeImage.mirrorVertically()
+    return nativeImage
 }
 
 
 private suspend fun MinecraftClient.takeScreenshot(x: Double, y: Double, z: Double, pitch: Float, yaw: Float, width: Int, height: Int, fov: Double): ByteArray {
-    val framebufferWidth = window.framebufferWidth
-    val framebufferHeight = window.framebufferHeight
     val oldFramebuffer = framebuffer
 
-    val framebuffer = SimpleFramebuffer(width, height, true, IS_SYSTEM_MAC)
-
     gameRenderer.setBlockOutlineEnabled(false)
-
     worldRenderer.reloadTransparencyPostProcessor()
-    window.framebufferWidth = width
-    window.framebufferHeight = height
 
     val oldCameraEntity = cameraEntity
 
@@ -125,34 +135,30 @@ private suspend fun MinecraftClient.takeScreenshot(x: Double, y: Double, z: Doub
     val fovOverwritable = gameRenderer as FovOverwritable
     fovOverwritable.fovOverwrite = fov
 
-    framebuffer.beginWrite(false)
-    gameRenderer.renderWorld(1.0f, 0L, MatrixStack())
-
-    val img = ScreenshotRecorder.takeScreenshot(framebuffer)
-
-    val result = withContext(Dispatchers.IO) {
-        Files.createTempFile("screenshot", ".png").let {
-            img.writeTo(it)
-            val bytes = Files.readAllBytes(it)
-
-            Files.deleteIfExists(it)
-            return@let bytes
+    val framebuffer = withContext(renderCallDispatcher) {
+        SimpleFramebuffer(width, height, true, IS_SYSTEM_MAC).also {
+            it.beginWrite(false)
+            gameRenderer.renderWorld(1.0f, 0L, MatrixStack())
         }
     }
 
-    img.close()
+    val img = takeScreenshot(framebuffer)
 
     // Reset everything
     fovOverwritable.fovOverwrite = null
 
     setCameraEntity(oldCameraEntity)
     gameRenderer.setBlockOutlineEnabled(true)
-    window.framebufferWidth = framebufferWidth
-    window.framebufferHeight = framebufferHeight
-    framebuffer.delete()
 
     this.worldRenderer.reloadTransparencyPostProcessor()
     oldFramebuffer.beginWrite(true)
+
+    val result = img.bytes
+    img.close()
+
+    withContext(renderCallDispatcher) {
+        framebuffer.delete()
+    }
 
     return result
 }
