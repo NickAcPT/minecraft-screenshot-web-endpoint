@@ -8,6 +8,8 @@ import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.QueryValue
 import io.micronaut.serde.annotation.SerdeImport
+import io.micronaut.serde.annotation.Serdeable
+import io.micronaut.serde.annotation.Serdeable.Deserializable
 import kotlinx.coroutines.future.await
 import net.minecraft.client.MinecraftClient
 import net.minecraft.client.MinecraftClient.IS_SYSTEM_MAC
@@ -21,27 +23,26 @@ import java.util.*
 import java.util.concurrent.CompletableFuture
 
 @Introspected
+@Serdeable
 data class ScreenshotData(
         val x: Double,
         val y: Double,
         val z: Double,
         val pitch: Float,
         val yaw: Float,
-        val width: Int = 512,
-        val height: Int = 512,
-        val fov: Double = 90.0
-)
+        val width: Int,
+        val height: Int,
+        val fov: Double
+) {
+    init {
+        check(width > 0) { "Width must be greater than 0" }
+        check(height > 0) { "Height must be greater than 0" }
+        check(fov > 0) { "Fov must be greater than 0" }
+    }
+}
 
 @Controller("/screenshot")
-@SerdeImport(ScreenshotData::class)
 class ScreenshotController {
-
-
-    @Get("/meh{?data*}", produces = [MediaType.TEXT_PLAIN])
-    suspend fun getScreenshotMeh(@QueryValue data: ScreenshotData): String {
-        return data.toString()
-    }
-
 
     @Get("/{?data*}", produces = [MediaType.IMAGE_PNG])
     suspend fun getScreenshot(@QueryValue data: ScreenshotData): ByteArray {
@@ -97,7 +98,6 @@ class ScreenshotController {
 
         framebuffer.beginWrite(true)
         gameRenderer.renderWorld(1.0f, 0L, MatrixStack())
-        Thread.sleep(10L)
 
         val result = ScreenshotRecorder.takeScreenshot(framebuffer).use { img ->
             Files.createTempFile("screenshot", ".png").let {
