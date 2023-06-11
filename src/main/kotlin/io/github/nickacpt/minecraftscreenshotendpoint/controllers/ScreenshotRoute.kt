@@ -64,7 +64,7 @@ fun Application.screenshotRoute() {
 
                 call.respondBytes {
                     semaphore.withPermit {
-                        withContext(Dispatchers.IO) {
+                        withContext(ioDispatcher) {
                             getScreenshot(data)
                         }
                     }
@@ -78,6 +78,10 @@ fun Application.screenshotRoute() {
     }
 
 }
+
+val ioDispatcher = Executor {
+    MinecraftClient.getInstance().execute(it)
+}.asCoroutineDispatcher()
 
 val renderCallDispatcher = Executor {
     RenderSystem.recordRenderCall {
@@ -103,7 +107,7 @@ private suspend fun getScreenshot(data: ScreenshotData): ByteArray {
 }
 
 
-suspend fun takeScreenshot(framebuffer: Framebuffer): NativeImage {
+suspend fun takeScreenshot(framebuffer: Framebuffer, oldFramebuffer: Framebuffer): NativeImage {
     val w = framebuffer.textureWidth
     val h = framebuffer.textureHeight
     val nativeImage = NativeImage(w, h, false)
@@ -111,6 +115,8 @@ suspend fun takeScreenshot(framebuffer: Framebuffer): NativeImage {
     withContext(renderCallDispatcher) {
         RenderSystem.bindTexture(framebuffer.colorAttachment)
         nativeImage.loadFromTextureImage(0, true)
+
+        oldFramebuffer.beginWrite(true)
     }
 
     nativeImage.mirrorVertically()
@@ -142,7 +148,7 @@ private suspend fun MinecraftClient.takeScreenshot(x: Double, y: Double, z: Doub
         }
     }
 
-    val img = takeScreenshot(framebuffer)
+    val img = takeScreenshot(framebuffer, oldFramebuffer)
 
     // Reset everything
     fovOverwritable.fovOverwrite = null
@@ -151,7 +157,6 @@ private suspend fun MinecraftClient.takeScreenshot(x: Double, y: Double, z: Doub
     gameRenderer.setBlockOutlineEnabled(true)
 
     this.worldRenderer.reloadTransparencyPostProcessor()
-    oldFramebuffer.beginWrite(true)
 
     val result = img.bytes
     img.close()
