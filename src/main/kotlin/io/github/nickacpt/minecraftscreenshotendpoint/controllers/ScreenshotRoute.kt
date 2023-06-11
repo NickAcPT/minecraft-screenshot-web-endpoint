@@ -6,6 +6,7 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -71,16 +72,13 @@ fun Application.screenshotRoute() {
             }.onFailure {
                 call.response.status(HttpStatusCode.InternalServerError)
                 call.respond(it.message ?: "Unknown error")
-                it.printStackTrace()
             }
         }
     }
 
 }
 
-val ioDispatcher = Executor {
-    MinecraftClient.getInstance().execute(it)
-}.asCoroutineDispatcher()
+val ioDispatcher = Dispatchers.IO
 
 val renderCallDispatcher = Executor {
     RenderSystem.recordRenderCall {
@@ -106,7 +104,7 @@ private suspend fun getScreenshot(data: ScreenshotData): ByteArray {
 }
 
 
-suspend fun takeScreenshot(framebuffer: Framebuffer): NativeImage {
+suspend fun takeScreenshot(framebuffer: Framebuffer): ByteArray {
     val w = framebuffer.textureWidth
     val h = framebuffer.textureHeight
     val nativeImage = NativeImage(w, h, false)
@@ -114,55 +112,55 @@ suspend fun takeScreenshot(framebuffer: Framebuffer): NativeImage {
     withContext(renderCallDispatcher) {
         RenderSystem.bindTexture(framebuffer.colorAttachment)
         nativeImage.loadFromTextureImage(0, true)
+        framebuffer.delete()
     }
 
     nativeImage.mirrorVertically()
-    return nativeImage
+
+    return nativeImage.use {
+        it.bytes
+    }
 }
 
 
 private suspend fun MinecraftClient.takeScreenshot(x: Double, y: Double, z: Double, pitch: Float, yaw: Float, width: Int, height: Int, fov: Double): ByteArray {
-    val oldFramebuffer = framebuffer
-
-    gameRenderer.setBlockOutlineEnabled(false)
-    worldRenderer.reloadTransparencyPostProcessor()
-
-    val oldCameraEntity = cameraEntity
-
     val newCameraEntity = interactionManager!!.createPlayer(this.world, StatHandler(), ClientRecipeBook())
     newCameraEntity.setPos(x, y, z)
     newCameraEntity.yaw = yaw
     newCameraEntity.pitch = pitch
-    cameraEntity = newCameraEntity
 
     val fovOverwritable = gameRenderer as FovOverwritable
-    fovOverwritable.fovOverwrite = fov
-
     val framebuffer = withContext(renderCallDispatcher) {
         SimpleFramebuffer(width, height, true, IS_SYSTEM_MAC).also {
-            it.beginWrite(false)
+            val oldCameraEntity = cameraEntity
+
+            val oldBufferWidth = window.framebufferWidth
+            val oldBufferHeight = window.framebufferHeight
+
+            // Prepare our screenshot camera
+            gameRenderer.setBlockOutlineEnabled(false)
+            cameraEntity = newCameraEntity
+            fovOverwritable.fovOverwrite = fov
+
+            // GO! Render things now!
+            it.beginWrite(true)
+
+            window.framebufferWidth = width
+            window.framebufferHeight = height
+
             gameRenderer.renderWorld(1.0f, 0L, MatrixStack())
 
             // Reset everything
             fovOverwritable.fovOverwrite = null
-
-            setCameraEntity(oldCameraEntity)
+            cameraEntity = oldCameraEntity
             gameRenderer.setBlockOutlineEnabled(true)
 
+            window.framebufferWidth = oldBufferWidth
+            window.framebufferHeight = oldBufferHeight
 
-
-            //oldFramebuffer.beginWrite(true)
+            framebuffer.beginWrite(true)
         }
     }
 
-    val img = takeScreenshot(framebuffer)
-
-    val result = img.bytes
-    img.close()
-
-    withContext(renderCallDispatcher) {
-        framebuffer.delete()
-    }
-
-    return result
+    return takeScreenshot(framebuffer)
 }
