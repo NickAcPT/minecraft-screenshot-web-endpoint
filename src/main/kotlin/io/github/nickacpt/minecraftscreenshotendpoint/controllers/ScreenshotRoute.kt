@@ -71,7 +71,7 @@ fun Application.screenshotRoute() {
                 }
             }.onFailure {
                 call.response.status(HttpStatusCode.InternalServerError)
-                call.respond(it.message ?: "Unknown error")
+                call.respond(it.stackTraceToString())
             }
         }
     }
@@ -128,36 +128,44 @@ private suspend fun MinecraftClient.takeScreenshot(x: Double, y: Double, z: Doub
     newCameraEntity.setPos(x, y, z)
     newCameraEntity.yaw = yaw
     newCameraEntity.pitch = pitch
+    newCameraEntity.prevYaw = yaw
+    newCameraEntity.prevPitch = pitch
 
     val fovOverwritable = gameRenderer as FovOverwritable
     val framebuffer = withContext(renderCallDispatcher) {
         SimpleFramebuffer(width, height, true, IS_SYSTEM_MAC).also {
             val oldCameraEntity = cameraEntity
 
+            gameRenderer.isRenderingPanorama = true
             val oldBufferWidth = window.framebufferWidth
             val oldBufferHeight = window.framebufferHeight
 
             // Prepare our screenshot camera
-            gameRenderer.setBlockOutlineEnabled(false)
+            window.framebufferWidth = width
+            window.framebufferHeight = height
+
             cameraEntity = newCameraEntity
             fovOverwritable.fovOverwrite = fov
 
+            gameRenderer.setBlockOutlineEnabled(false)
+            worldRenderer.reloadTransparencyPostProcessor()
+
             // GO! Render things now!
             it.beginWrite(true)
-
-            window.framebufferWidth = width
-            window.framebufferHeight = height
 
             gameRenderer.renderWorld(1.0f, 0L, MatrixStack())
 
             // Reset everything
             fovOverwritable.fovOverwrite = null
+
             cameraEntity = oldCameraEntity
             gameRenderer.setBlockOutlineEnabled(true)
+            worldRenderer.reloadTransparencyPostProcessor()
 
             window.framebufferWidth = oldBufferWidth
             window.framebufferHeight = oldBufferHeight
 
+            gameRenderer.isRenderingPanorama = false
             framebuffer.beginWrite(true)
         }
     }

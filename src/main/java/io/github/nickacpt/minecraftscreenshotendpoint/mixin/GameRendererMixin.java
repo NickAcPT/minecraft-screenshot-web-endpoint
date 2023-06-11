@@ -13,7 +13,7 @@ public class GameRendererMixin implements FovOverwritable {
 	private Double fovOverwrite;
 
 	@Inject(at = @At("HEAD"), method = "getFov", cancellable = true)
-	private void init(Camera camera, float tickDelta, boolean changingFov, CallbackInfoReturnable<Double> info) {
+	private void getFovHook(CallbackInfoReturnable<Double> info) {
 		if (fovOverwrite != null) {
 			info.setReturnValue(fovOverwrite);
 		}
