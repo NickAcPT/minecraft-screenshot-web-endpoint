@@ -4,12 +4,14 @@ plugins {
     id 'fabric-loom' version '1.2-SNAPSHOT'
     id 'maven-publish'
     id "org.jetbrains.kotlin.jvm" version "1.8.22"
-
-    id 'io.ktor.plugin' version '2.3.1'
 }
 
 version = project.mod_version
 group = project.maven_group
+
+configurations {
+    transitiveInclude
+}
 
 base {
     archivesName = project.archives_base_name
@@ -17,11 +19,11 @@ base {
 
 
 dependencies {
-    implementation(include("io.ktor:ktor-server-content-negotiation-jvm:$ktor_version"))
-    implementation(include("io.ktor:ktor-server-core-jvm:$ktor_version"))
-    implementation(include("io.ktor:ktor-serialization-jackson-jvm:$ktor_version"))
-    implementation(include("io.ktor:ktor-server-jetty-jvm:$ktor_version"))
-    implementation(include("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.7.1"))
+    implementation(transitiveInclude("io.ktor:ktor-server-content-negotiation-jvm:$ktor_version"))
+    implementation(transitiveInclude("io.ktor:ktor-server-core-jvm:$ktor_version"))
+    implementation(transitiveInclude("io.ktor:ktor-serialization-jackson-jvm:$ktor_version"))
+    implementation(transitiveInclude("io.ktor:ktor-server-jetty-jvm:$ktor_version"))
+    implementation(transitiveInclude("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.7.1"))
 
     // To change the versions see the gradle.properties file
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
@@ -29,6 +31,14 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
     modImplementation "net.fabricmc:fabric-language-kotlin:${project.fabric_kotlin_version}"
+
+    configurations.transitiveInclude.resolvedConfiguration.resolvedArtifacts.each { artifact ->
+        def name = artifact.id.getComponentIdentifier().displayName
+
+        if (name.contains("ktor") || name.contains("jetty") || name.contains("javax")) {
+            include name
+        }
+    }
 }
 
 

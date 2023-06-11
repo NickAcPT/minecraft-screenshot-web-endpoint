@@ -2,7 +2,6 @@ package io.github.nickacpt.minecraftscreenshotendpoint
 
 import io.github.nickacpt.minecraftscreenshotendpoint.controllers.screenshotRoute
 import net.fabricmc.api.ModInitializer
-import org.slf4j.LoggerFactory
 import kotlin.concurrent.thread
 
 import io.ktor.server.application.*
