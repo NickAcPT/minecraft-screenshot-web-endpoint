@@ -1,20 +1,32 @@
 package io.github.nickacpt.minecraftscreenshotendpoint
 
-import io.micronaut.runtime.Micronaut
+import io.github.nickacpt.minecraftscreenshotendpoint.controllers.screenshotRoute
 import net.fabricmc.api.ModInitializer
 import org.slf4j.LoggerFactory
 import kotlin.concurrent.thread
 
-fun main(args: Array<String>) {
-	Micronaut.run(*args)
-}
+import io.ktor.server.application.*
+import io.ktor.server.engine.*
+import io.ktor.server.jetty.*
 
 object ExampleMod : ModInitializer {
-    private val logger = LoggerFactory.getLogger("minecraft-screenshot-web-endpoint")
-
 	override fun onInitialize() {
 		thread {
-			Micronaut.run()
+			initializeKtor()
 		}
 	}
+
+	@JvmStatic
+	fun main(args: Array<String>) {
+		initializeKtor()
+	}
+
+	private fun initializeKtor() {
+		embeddedServer(Jetty, port = 36210, host = "127.0.0.1", module = Application::module)
+				.start(wait = true)
+	}
+}
+
+fun Application.module() {
+	screenshotRoute()
 }

@@ -5,9 +5,7 @@ plugins {
     id 'maven-publish'
     id "org.jetbrains.kotlin.jvm" version "1.8.22"
 
-    id("org.jetbrains.kotlin.kapt") version "1.8.22"
-    id("org.jetbrains.kotlin.plugin.allopen") version "1.8.22"
-    id("io.micronaut.application") version "4.0.0-M4"
+    id 'io.ktor.plugin' version '2.3.1'
 }
 
 version = project.mod_version
@@ -17,38 +15,19 @@ base {
     archivesName = project.archives_base_name
 }
 
-repositories {
-    maven {
-        url "https://s01.oss.sonatype.org/content/repositories/snapshots/"
-        mavenContent { snapshotsOnly() }
-    }
-    mavenCentral()
-}
-
-configurations {
-    micronaut {
-        extendsFrom compileClasspath
-    }
-}
 
 dependencies {
-    kapt("io.micronaut:micronaut-http-validation")
-    kapt("io.micronaut.serde:micronaut-serde-processor")
-
-    micronaut("io.micronaut:micronaut-jackson-databind")
-    micronaut("io.micronaut.kotlin:micronaut-kotlin-runtime")
-    micronaut("io.micronaut.serde:micronaut-serde-jackson")
-    micronaut("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
-
-    micronaut("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation(include("io.ktor:ktor-server-content-negotiation-jvm:$ktor_version"))
+    implementation(include("io.ktor:ktor-server-core-jvm:$ktor_version"))
+    implementation(include("io.ktor:ktor-serialization-jackson-jvm:$ktor_version"))
+    implementation(include("io.ktor:ktor-server-jetty-jvm:$ktor_version"))
+    implementation(include("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.7.1"))
 
     // To change the versions see the gradle.properties file
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
-    // Fabric API. This is technically optional, but you probably want it anyway.
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
     modImplementation "net.fabricmc:fabric-language-kotlin:${project.fabric_kotlin_version}"
 }
 
@@ -77,14 +56,5 @@ java {
 jar {
     from("LICENSE") {
         rename { "${it}_${project.archivesBaseName}" }
-    }
-}
-
-graalvmNative.toolchainDetection = false
-micronaut {
-    runtime("jetty")
-    processing {
-        incremental(true)
-        annotations("io.github.nickacpt.minecraftscreenshotendpoint.*")
     }
 }
