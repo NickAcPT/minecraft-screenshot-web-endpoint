@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Image Request Form</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        label {
+            display: inline-block;
+            width: 100px;
+            font-weight: bold;
+        }
+
+        input[type="range"] {
+            width: 200px;
+        }
+
+        .submit-button {
+            margin-top: 20px;
+        }
+    </style>
+    <script>
+        function updateImageURL() {
+            var x = document.getElementById("x-slider").value;
+            var y = document.getElementById("y-slider").value;
+            var z = document.getElementById("z-slider").value;
+            var yaw = document.getElementById("yaw-slider").value;
+            var pitch = document.getElementById("pitch-slider").value;
+            var fov = document.getElementById("fov-slider").value;
+            var width = document.getElementById("width-slider").value;
+            var height = document.getElementById("height-slider").value;
+
+            var imageUrl = "https://nickac-pc.werewolf-scala.ts.net/temp/screenshot?" +
+                "x=" + x +
+                "&y=" + y +
+                "&z=" + z +
+                "&yaw=" + yaw +
+                "&pitch=" + pitch +
+                "&fov=" + fov +
+                "&width=" + width +
+                "&height=" + height;
+
+            document.getElementById("image-url").textContent = imageUrl;
+            document.getElementById("image-preview").src = imageUrl;
+        }
+    </script>
+</head>
+<body>
+<h1>Image Request Form</h1>
+
+<div>
+    <label for="x-slider">X:</label>
+    <input type="range" id="x-slider" min="-100" max="100" step="0.01" value="0.76" onchange="updateImageURL()">
+</div>
+
+<div>
+    <label for="y-slider">Y:</label>
+    <input type="range" id="y-slider" min="-100" max="100" step="0.01" value="-57.84" onchange="updateImageURL()">
+</div>
+
+<div>
+    <label for="z-slider">Z:</label>
+    <input type="range" id="z-slider" min="-100" max="100" step="0.01" value="-1.42" onchange="updateImageURL()">
+</div>
+
+<div>
+    <label for="yaw-slider">Yaw:</label>
+    <input type="range" id="yaw-slider" min="-180" max="180" step="0.01" value="-45" onchange="updateImageURL()">
+</div>
+
+<div>
+    <label for="pitch-slider">Pitch:</label>
+    <input type="range" id="pitch-slider" min="-180" max="180" step="0.01" value="12.60" onchange="updateImageURL()">
+</div>
+
+<div>
+    <label for="fov-slider">FOV:</label>
+    <input type="range" id="fov-slider" min="1" max="180" step="0.01" value="90" onchange="updateImageURL()">
+</div>
+
+<div>
+    <label for="width-slider">Width:</label>
+    <input type="range" id="width-slider" min="1" max="3840" step="1" value="1920" onchange="updateImageURL()">
+</div>
+
+<div>
+    <label for="height-slider">Height:</label>
+    <input type="range" id="height-slider" min="1" max="2160" step="1" value="1080" onchange="updateImageURL()">
+</div>
+
+<h2>Image URL:</h2>
+<p id="image-url">https://nickac-pc.werewolf-scala.ts.net/temp/screenshot?x=0.76&amp;y=-57.84&amp;z=-1.42&amp;yaw=-45.00&amp;pitch=12.60&amp;fov=90&amp;width=1920&amp;height=1080</p>
+
+<h2>Image Preview:</h2>
+<img id="image-preview"
+     src="https://nickac-pc.werewolf-scala.ts.net/temp/screenshot?x=0.76&amp;y=-57.84&amp;z=-1.42&amp;yaw=-45.00&amp;pitch=12.60&amp;fov=90&amp;width=1920&amp;height=1080"
+     alt="Image Preview" width="400">
+</body>
+</html>

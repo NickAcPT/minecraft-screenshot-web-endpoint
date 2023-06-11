@@ -149,6 +149,8 @@ private suspend fun MinecraftClient.takeScreenshot(x: Double, y: Double, z: Doub
             setCameraEntity(oldCameraEntity)
             gameRenderer.setBlockOutlineEnabled(true)
 
+
+
             //oldFramebuffer.beginWrite(true)
         }
     }
