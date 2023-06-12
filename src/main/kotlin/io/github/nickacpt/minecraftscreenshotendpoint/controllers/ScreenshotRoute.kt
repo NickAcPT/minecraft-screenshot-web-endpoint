@@ -151,7 +151,7 @@ private suspend fun MinecraftClient.takeScreenshot(x: Double, y: Double, z: Doub
             worldRenderer.reloadTransparencyPostProcessor()
 
             // GO! Render things now!
-            it.beginWrite(true)
+            it.beginWrite(false)
 
             gameRenderer.renderWorld(1.0f, 0L, MatrixStack())
 
