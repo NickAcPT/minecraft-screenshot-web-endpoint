@@ -3,19 +3,19 @@
 	"id": "minecraft-screenshot-web-endpoint",
 	"version": "${version}",
 	"name": "Minecraft Screenshot Web Endpoint",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"description": "A mod that adds a web endpoint to get screenshots from the game",
 	"authors": [
 		"NickAcPT"
 	],
 	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
+		"homepage": "https://github.com/NickAcPT/minecraft-screenshot-web-endpoint",
+		"sources": "https://github.com/NickAcPT/minecraft-screenshot-web-endpoint"
 	},
 	"license": "MIT",
 	"icon": "assets/minecraft-screenshot-web-endpoint/icon.png",
 	"environment": "client",
 	"entrypoints": {
-		"main": [
+		"client": [
 			{
 				"value": "io.github.nickacpt.minecraftscreenshotendpoint.MinecraftScreenshotEndpointMod",
 				"adapter": "kotlin"
