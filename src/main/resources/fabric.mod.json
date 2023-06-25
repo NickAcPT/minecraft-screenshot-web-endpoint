@@ -12,7 +12,6 @@
 		"sources": "https://github.com/NickAcPT/minecraft-screenshot-web-endpoint"
 	},
 	"license": "MIT",
-	"icon": "assets/minecraft-screenshot-web-endpoint/icon.png",
 	"environment": "client",
 	"entrypoints": {
 		"client": [
