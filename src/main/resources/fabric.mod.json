@@ -25,7 +25,7 @@
 		"minecraft-screenshot-web-endpoint.mixins.json"
 	],
 	"depends": {
-		"minecraft": "~1.19.4",
+		"minecraft": "~1.20.1",
 		"java": ">=17",
 		"fabric-language-kotlin": ">=1.8.22"
 	}
