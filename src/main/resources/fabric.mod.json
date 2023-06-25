@@ -13,11 +13,11 @@
 	},
 	"license": "MIT",
 	"icon": "assets/minecraft-screenshot-web-endpoint/icon.png",
-	"environment": "*",
+	"environment": "client",
 	"entrypoints": {
 		"main": [
 			{
-				"value": "io.github.nickacpt.minecraftscreenshotendpoint.ExampleMod",
+				"value": "io.github.nickacpt.minecraftscreenshotendpoint.MinecraftScreenshotEndpointMod",
 				"adapter": "kotlin"
 			}
 		]
