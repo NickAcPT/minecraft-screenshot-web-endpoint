@@ -25,6 +25,8 @@ fun Application.teleportRoute() {
                     "execute in $level run tp ${player.uuid} $x $y $z $yaw $pitch",
                 )
             }
+
+            call.respondText("OK")
         }
     }
 }
