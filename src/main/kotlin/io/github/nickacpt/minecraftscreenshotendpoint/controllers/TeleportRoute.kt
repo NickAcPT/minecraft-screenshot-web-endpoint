@@ -4,6 +4,9 @@ import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.minecraft.client.MinecraftClient
+import net.minecraft.registry.RegistryKey
+import net.minecraft.registry.RegistryKeys
+import net.minecraft.util.Identifier
 
 fun Application.teleportRoute() {
     routing {
@@ -21,9 +24,21 @@ fun Application.teleportRoute() {
             val player = MinecraftClient.getInstance().player ?: return@get call.respondText("Player not found")
 
             MinecraftClient.getInstance().execute {
-                player.networkHandler?.sendChatCommand(
-                    "execute in $level run tp ${player.uuid} $x $y $z $yaw $pitch",
-                )
+                val teleporter = MinecraftClient.getInstance().server?.let {
+                    val world = Identifier.tryParse(level)?.let { id ->
+                        it.getWorld(RegistryKey.of(RegistryKeys.WORLD, id))
+                    };
+
+                    { it.playerManager.getPlayer(player.uuid)?.teleport(world, x, y, z, emptySet(), yaw, pitch) }
+                };
+
+                if (teleporter != null) {
+                    teleporter()
+                } else {
+                    player.networkHandler?.sendChatCommand(
+                        "execute in $level run tp ${player.uuid} $x $y $z $yaw $pitch",
+                    )
+                }
             }
 
             call.respondText("OK")
