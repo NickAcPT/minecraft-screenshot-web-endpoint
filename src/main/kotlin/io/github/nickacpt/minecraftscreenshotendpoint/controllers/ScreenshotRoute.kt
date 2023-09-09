@@ -123,7 +123,16 @@ suspend fun takeScreenshot(framebuffer: Framebuffer): ByteArray {
 }
 
 
-private suspend fun MinecraftClient.takeScreenshot(x: Double, y: Double, z: Double, pitch: Float, yaw: Float, width: Int, height: Int, fov: Double): ByteArray {
+private suspend fun MinecraftClient.takeScreenshot(
+    x: Double,
+    y: Double,
+    z: Double,
+    pitch: Float,
+    yaw: Float,
+    width: Int,
+    height: Int,
+    fov: Double
+): ByteArray {
     val newCameraEntity = interactionManager!!.createPlayer(this.world, StatHandler(), ClientRecipeBook())
     newCameraEntity.setPos(x, y, z)
     newCameraEntity.yaw = yaw
@@ -170,5 +179,7 @@ private suspend fun MinecraftClient.takeScreenshot(x: Double, y: Double, z: Doub
         }
     }
 
-    return takeScreenshot(framebuffer)
+    return takeScreenshot(framebuffer).also {
+        onResolutionChanged()
+    }
 }
