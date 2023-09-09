@@ -2,6 +2,7 @@ package io.github.nickacpt.minecraftscreenshotendpoint.controllers
 
 import com.mojang.blaze3d.systems.RenderSystem
 import io.github.nickacpt.minecraftscreenshotendpoint.FovOverwritable
+import io.github.nickacpt.minecraftscreenshotendpoint.OriginalWindowFramebufferSize
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
@@ -20,16 +21,17 @@ import net.minecraft.client.texture.NativeImage
 import net.minecraft.client.util.math.MatrixStack
 import net.minecraft.stat.StatHandler
 import java.util.concurrent.Executor
+import kotlin.math.roundToInt
 
 data class ScreenshotData(
-        val x: Double,
-        val y: Double,
-        val z: Double,
-        val pitch: Float,
-        val yaw: Float,
-        val width: Int,
-        val height: Int,
-        val fov: Double
+    val x: Double,
+    val y: Double,
+    val z: Double,
+    val pitch: Float,
+    val yaw: Float,
+    val width: Int,
+    val height: Int,
+    val fov: Double
 ) {
     init {
         check(width > 0) { "Width must be greater than 0" }
@@ -52,14 +54,14 @@ fun Application.screenshotRoute() {
             runCatching {
                 val query = call.request.queryParameters
                 val data = ScreenshotData(
-                        query["x"]?.toDouble() ?: 0.0,
-                        query["y"]?.toDouble() ?: 0.0,
-                        query["z"]?.toDouble() ?: 0.0,
-                        query["pitch"]?.toFloat() ?: 0.0f,
-                        query["yaw"]?.toFloat() ?: 0.0f,
-                        query["width"]?.toInt() ?: 0,
-                        query["height"]?.toInt() ?: 0,
-                        query["fov"]?.toDouble() ?: 0.0
+                    query["x"]?.toDouble() ?: 0.0,
+                    query["y"]?.toDouble() ?: 0.0,
+                    query["z"]?.toDouble() ?: 0.0,
+                    query["pitch"]?.toFloat() ?: 0.0f,
+                    query["yaw"]?.toFloat() ?: 0.0f,
+                    query["width"]?.toInt() ?: 0,
+                    query["height"]?.toInt() ?: 0,
+                    query["fov"]?.toDouble() ?: 0.0
                 )
 
                 call.respondBytes {
@@ -92,14 +94,14 @@ private suspend fun getScreenshot(data: ScreenshotData): ByteArray {
     }
 
     return MinecraftClient.getInstance().takeScreenshot(
-            data.x,
-            data.y,
-            data.z,
-            data.pitch,
-            data.yaw,
-            data.width,
-            data.height,
-            data.fov
+        data.x,
+        data.y,
+        data.z,
+        data.pitch,
+        data.yaw,
+        data.width,
+        data.height,
+        data.fov
     )
 }
 
@@ -141,17 +143,24 @@ private suspend fun MinecraftClient.takeScreenshot(
     newCameraEntity.prevPitch = pitch
 
     val fovOverwritable = gameRenderer as FovOverwritable
+    @Suppress("CAST_NEVER_SUCCEEDS") // We know it's not null because we're we mixed into it
     val framebuffer = withContext(renderCallDispatcher) {
         SimpleFramebuffer(width, height, true, IS_SYSTEM_MAC).also {
             val oldCameraEntity = cameraEntity
 
             gameRenderer.isRenderingPanorama = true
-            val oldBufferWidth = window.framebufferWidth
-            val oldBufferHeight = window.framebufferHeight
+            val original = window as? OriginalWindowFramebufferSize
+            val oldBufferWidth = original?.originalFramebufferWidth() ?: window.framebufferWidth
+            val oldBufferHeight = original?.originalFramebufferHeight() ?: window.framebufferHeight
+
+            // Difference between the old and new buffer sizes as a percentage
+            // (should be 1 unless there is a mod changing the return of the framebuffer size getters)
+            val widthDifference = oldBufferWidth.toFloat() / window.framebufferWidth
+            val heightDifference = oldBufferHeight.toFloat() / window.framebufferHeight
 
             // Prepare our screenshot camera
-            window.framebufferWidth = width
-            window.framebufferHeight = height
+            window.framebufferWidth = (width * widthDifference).roundToInt()
+            window.framebufferHeight = (height * heightDifference).roundToInt()
 
             cameraEntity = newCameraEntity
             fovOverwritable.fovOverwrite = fov
@@ -175,7 +184,7 @@ private suspend fun MinecraftClient.takeScreenshot(
             window.framebufferHeight = oldBufferHeight
 
             gameRenderer.isRenderingPanorama = false
-            framebuffer.beginWrite(true)
+            framebuffer.beginWrite(false)
         }
     }
 

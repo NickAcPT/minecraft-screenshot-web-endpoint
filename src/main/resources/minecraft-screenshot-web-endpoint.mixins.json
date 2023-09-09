@@ -3,6 +3,7 @@
 	"package": "io.github.nickacpt.minecraftscreenshotendpoint.mixin",
 	"compatibilityLevel": "JAVA_17",
 	"mixins": [
+		"WindowMixin",
 		"GameRendererMixin"
 	],
 	"injectors": {
