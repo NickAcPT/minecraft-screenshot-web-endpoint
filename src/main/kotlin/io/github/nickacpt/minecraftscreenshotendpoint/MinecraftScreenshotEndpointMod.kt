@@ -1,6 +1,7 @@
 package io.github.nickacpt.minecraftscreenshotendpoint
 
 import io.github.nickacpt.minecraftscreenshotendpoint.controllers.screenshotRoute
+import io.github.nickacpt.minecraftscreenshotendpoint.controllers.teleportRoute
 import kotlin.concurrent.thread
 
 import io.ktor.server.application.*
@@ -28,4 +29,5 @@ object MinecraftScreenshotEndpointMod : ClientModInitializer {
 
 fun Application.module() {
 	screenshotRoute()
+	teleportRoute()
 }
