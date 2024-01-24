@@ -189,6 +189,8 @@ private suspend fun MinecraftClient.takeScreenshot(
     }
 
     return takeScreenshot(framebuffer).also {
-        onResolutionChanged()
+        withContext(renderCallDispatcher) {
+            onResolutionChanged()
+        }
     }
 }
