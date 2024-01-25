@@ -29,7 +29,15 @@ fun Application.teleportRoute() {
                         it.getWorld(RegistryKey.of(RegistryKeys.WORLD, id))
                     };
 
-                    { it.playerManager.getPlayer(player.uuid)?.teleport(world, x, y, z, emptySet(), yaw, pitch) }
+                    {
+                        val playerEntity = it.playerManager.getPlayer(player.uuid)
+
+                        playerEntity?.also {
+                            if (it.abilities.allowFlying) it.abilities.flying = true
+                        }?.sendAbilitiesUpdate()
+
+                        playerEntity?.teleport(world, x, y, z, emptySet(), yaw, pitch)
+                    }
                 };
 
                 if (teleporter != null) {
