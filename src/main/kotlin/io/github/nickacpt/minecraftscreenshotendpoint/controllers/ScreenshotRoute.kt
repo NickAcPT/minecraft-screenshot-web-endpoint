@@ -2,6 +2,7 @@ package io.github.nickacpt.minecraftscreenshotendpoint.controllers
 
 import com.mojang.blaze3d.systems.RenderSystem
 import io.github.nickacpt.minecraftscreenshotendpoint.FovOverwritable
+import io.github.nickacpt.minecraftscreenshotendpoint.FramebufferOverwritable
 import io.github.nickacpt.minecraftscreenshotendpoint.OriginalWindowFramebufferSize
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -168,6 +169,10 @@ private suspend fun MinecraftClient.takeScreenshot(
             gameRenderer.setBlockOutlineEnabled(false)
             worldRenderer.reloadTransparencyPostProcessor()
 
+            var overwritable = this@takeScreenshot as FramebufferOverwritable
+
+            overwritable.`overriden$setFramebuffer`(it)
+
             // GO! Render things now!
             it.beginWrite(false)
 
@@ -175,6 +180,7 @@ private suspend fun MinecraftClient.takeScreenshot(
 
             // Reset everything
             fovOverwritable.fovOverwrite = null
+
 
             cameraEntity = oldCameraEntity
             gameRenderer.setBlockOutlineEnabled(true)
@@ -184,6 +190,7 @@ private suspend fun MinecraftClient.takeScreenshot(
             window.framebufferHeight = oldBufferHeight
 
             gameRenderer.isRenderingPanorama = false
+            overwritable.`overriden$setFramebuffer`(null)
             framebuffer.beginWrite(false)
         }
     }
