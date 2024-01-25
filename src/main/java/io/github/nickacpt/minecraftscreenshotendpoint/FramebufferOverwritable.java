@@ -4,6 +4,5 @@ import net.minecraft.client.gl.Framebuffer;
 
 public interface FramebufferOverwritable {
 
-    void overriden$setFramebuffer(Framebuffer framebuffer);
-
+    void mse$setFramebuffer(Framebuffer framebuffer);
 }

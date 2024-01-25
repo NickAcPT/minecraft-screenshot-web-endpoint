@@ -1,11 +1,9 @@
 package io.github.nickacpt.minecraftscreenshotendpoint;
 
-import net.minecraft.client.gl.Framebuffer;
-
 public interface FovOverwritable {
 
-    Double getFovOverwrite();
+    Double mse$getFovOverwrite();
 
-    void setFovOverwrite(Double fovOverwrite);
+    void mse$setFovOverwrite(Double fovOverwrite);
 
 }

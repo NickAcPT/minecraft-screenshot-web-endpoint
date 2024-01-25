@@ -3,7 +3,9 @@ package io.github.nickacpt.minecraftscreenshotendpoint.controllers
 import com.mojang.blaze3d.systems.RenderSystem
 import io.github.nickacpt.minecraftscreenshotendpoint.FovOverwritable
 import io.github.nickacpt.minecraftscreenshotendpoint.FramebufferOverwritable
+import io.github.nickacpt.minecraftscreenshotendpoint.FramebufferSizeOverwritable
 import io.github.nickacpt.minecraftscreenshotendpoint.OriginalWindowFramebufferSize
+import io.github.nickacpt.minecraftscreenshotendpoint.mixin.WindowAccessor
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
@@ -126,6 +128,7 @@ suspend fun takeScreenshot(framebuffer: Framebuffer): ByteArray {
 }
 
 
+@Suppress("CAST_NEVER_SUCCEEDS") // We know it's not null because we're we mixed into it
 private suspend fun MinecraftClient.takeScreenshot(
     x: Double,
     y: Double,
@@ -144,15 +147,19 @@ private suspend fun MinecraftClient.takeScreenshot(
     newCameraEntity.prevPitch = pitch
 
     val fovOverwritable = gameRenderer as FovOverwritable
+    val windowOverwritable = window as FramebufferSizeOverwritable
+
     @Suppress("CAST_NEVER_SUCCEEDS") // We know it's not null because we're we mixed into it
     val framebuffer = withContext(renderCallDispatcher) {
+        println("Taking screenshot ${framebuffer.useDepthAttachment}")
         SimpleFramebuffer(width, height, true, IS_SYSTEM_MAC).also {
             val oldCameraEntity = cameraEntity
+            println("Taking screenshot 2 ${it.useDepthAttachment}")
 
             gameRenderer.isRenderingPanorama = true
             val original = window as? OriginalWindowFramebufferSize
-            val oldBufferWidth = original?.originalFramebufferWidth() ?: window.framebufferWidth
-            val oldBufferHeight = original?.originalFramebufferHeight() ?: window.framebufferHeight
+            val oldBufferWidth = original?.`mse$originalFramebufferWidth`() ?: window.framebufferWidth
+            val oldBufferHeight = original?.`mse$originalFramebufferHeight`() ?: window.framebufferHeight
 
             // Difference between the old and new buffer sizes as a percentage
             // (should be 1 unless there is a mod changing the return of the framebuffer size getters)
@@ -160,18 +167,18 @@ private suspend fun MinecraftClient.takeScreenshot(
             val heightDifference = oldBufferHeight.toFloat() / window.framebufferHeight
 
             // Prepare our screenshot camera
-            window.framebufferWidth = (width * widthDifference).roundToInt()
-            window.framebufferHeight = (height * heightDifference).roundToInt()
+            windowOverwritable.`mse$setFramebufferWidth`((width * widthDifference).roundToInt())
+            windowOverwritable.`mse$setFramebufferHeight`((height * heightDifference).roundToInt())
 
             cameraEntity = newCameraEntity
-            fovOverwritable.fovOverwrite = fov
+            fovOverwritable.`mse$setFovOverwrite`(fov)
 
             gameRenderer.setBlockOutlineEnabled(false)
             worldRenderer.reloadTransparencyPostProcessor()
 
-            var overwritable = this@takeScreenshot as FramebufferOverwritable
+            val overwritable = this@takeScreenshot as FramebufferOverwritable
 
-            overwritable.`overriden$setFramebuffer`(it)
+            overwritable.`mse$setFramebuffer`(it)
 
             // GO! Render things now!
             it.beginWrite(false)
@@ -179,19 +186,22 @@ private suspend fun MinecraftClient.takeScreenshot(
             gameRenderer.renderWorld(1.0f, 0L, MatrixStack())
 
             // Reset everything
-            fovOverwritable.fovOverwrite = null
-
+            fovOverwritable.`mse$setFovOverwrite`(null)
 
             cameraEntity = oldCameraEntity
             gameRenderer.setBlockOutlineEnabled(true)
             worldRenderer.reloadTransparencyPostProcessor()
 
-            window.framebufferWidth = oldBufferWidth
-            window.framebufferHeight = oldBufferHeight
+            windowOverwritable.`mse$setFramebufferWidth`(null)
+            windowOverwritable.`mse$setFramebufferHeight`(null)
 
             gameRenderer.isRenderingPanorama = false
-            overwritable.`overriden$setFramebuffer`(null)
-            framebuffer.beginWrite(false)
+
+            overwritable.`mse$setFramebuffer`(null)
+
+            framebuffer.beginWrite(true)
+
+            (window as WindowAccessor).invokeOnFramebufferSizeChanged(window.handle, oldBufferWidth, oldBufferHeight)
         }
     }
 

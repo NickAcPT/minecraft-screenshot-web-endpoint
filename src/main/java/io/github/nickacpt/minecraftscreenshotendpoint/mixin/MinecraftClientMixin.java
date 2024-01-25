@@ -13,17 +13,17 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class MinecraftClientMixin implements FramebufferOverwritable {
 
     @Unique
-    private Framebuffer overriden$framebuffer;
+    private Framebuffer mse$framebuffer;
 
     @Override
-    public void overriden$setFramebuffer(Framebuffer framebuffer) {
-        overriden$framebuffer = framebuffer;
+    public void mse$setFramebuffer(Framebuffer framebuffer) {
+        mse$framebuffer = framebuffer;
     }
 
     @Inject(at = @At("HEAD"), method = "getFramebuffer", cancellable = true)
     private void getFramebufferHook(CallbackInfoReturnable<Framebuffer> info) {
-        if (overriden$framebuffer != null) {
-            info.setReturnValue(overriden$framebuffer);
+        if (mse$framebuffer != null) {
+            info.setReturnValue(mse$framebuffer);
         }
     }
 }
