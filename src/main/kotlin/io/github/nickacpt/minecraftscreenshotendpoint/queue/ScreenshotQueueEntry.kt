@@ -18,12 +18,10 @@ data class ScreenshotQueueEntry(
     val id: UUID = UUID.randomUUID(),
 ) {
     suspend fun await() {
-        println("Awaiting screenshot $id")
         return future.await()
     }
 
     fun notifyDone() {
-        println("Notifying screenshot $id")
         future.complete(Unit)
     }
 

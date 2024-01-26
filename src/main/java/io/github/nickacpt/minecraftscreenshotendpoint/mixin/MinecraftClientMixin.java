@@ -1,7 +1,6 @@
 package io.github.nickacpt.minecraftscreenshotendpoint.mixin;
 
 import io.github.nickacpt.minecraftscreenshotendpoint.ScreenshotTaskHolder;
-import io.github.nickacpt.minecraftscreenshotendpoint.queue.ScreenshotQueue;
 import io.github.nickacpt.minecraftscreenshotendpoint.queue.ScreenshotQueueEntry;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gl.Framebuffer;
@@ -37,14 +36,6 @@ public abstract class MinecraftClientMixin implements ScreenshotTaskHolder {
     @Override
     public void mse$setCurrentScreenshotEntryTask(ScreenshotQueueEntry task) {
         if (mse$currentScreenshotEntryTask == task) return;
-
-        if (task == null) {
-            System.out.println("Ending screenshot task");
-        } else {
-            System.out.println("Starting screenshot task " + task);
-        }
-        System.out.println("[STATS] Screenshot queue:" + ScreenshotQueue.INSTANCE.getSize());
-
         mse$currentScreenshotEntryTask = task;
 
         // Update the framebuffer to the new one
@@ -54,7 +45,6 @@ public abstract class MinecraftClientMixin implements ScreenshotTaskHolder {
         // Notify the game about the new framebuffer size
         var window = MinecraftClient.getInstance().getWindow();
 
-        System.out.println("newFramebuffer = " + newFramebuffer.textureWidth + "x" + newFramebuffer.textureHeight);
         ((WindowAccessor) (Object) window).invokeOnFramebufferSizeChanged(window.getHandle(), newFramebuffer.textureWidth, newFramebuffer.textureHeight);
 
     }

@@ -102,8 +102,6 @@ suspend fun takeScreenshot(framebuffer: Framebuffer): ByteArray {
     val h = framebuffer.textureHeight
     val nativeImage = NativeImage(w, h, false)
 
-    println("Taking screenshot with size $w x $h on framebuffer $framebuffer")
-
     withContext(renderCallDispatcher) {
         RenderSystem.bindTexture(framebuffer.colorAttachment)
         nativeImage.loadFromTextureImage(0, true)
