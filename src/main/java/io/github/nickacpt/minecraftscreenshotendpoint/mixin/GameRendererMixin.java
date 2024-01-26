@@ -35,7 +35,7 @@ public abstract class GameRendererMixin {
         var task = holder.mse$getCurrentScreenshotEntryTask();
 
         if (task != null) {
-            cir.setReturnValue(true);
+            cir.setReturnValue(false);
         }
     }
 
