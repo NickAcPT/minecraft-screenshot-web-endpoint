@@ -2,12 +2,12 @@ package io.github.nickacpt.minecraftscreenshotendpoint
 
 import io.github.nickacpt.minecraftscreenshotendpoint.controllers.screenshotRoute
 import io.github.nickacpt.minecraftscreenshotendpoint.controllers.teleportRoute
-import kotlin.concurrent.thread
-
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.jetty.*
 import net.fabricmc.api.ClientModInitializer
+import net.minecraft.client.MinecraftClient
+import kotlin.concurrent.thread
 
 object MinecraftScreenshotEndpointMod : ClientModInitializer {
 	override fun onInitializeClient() {

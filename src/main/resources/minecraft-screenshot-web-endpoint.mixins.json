@@ -7,8 +7,10 @@
   },
   "client": [
     "GameRendererMixin",
-    "WindowMixin",
     "MinecraftClientMixin",
-    "WindowAccessor"
+    "RenderSystemMixin",
+    "WindowAccessor",
+    "WindowMixin",
+    "WorldRendererMixin"
   ]
 }
