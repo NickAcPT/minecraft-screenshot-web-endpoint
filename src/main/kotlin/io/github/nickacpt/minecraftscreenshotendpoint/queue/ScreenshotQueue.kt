@@ -1,6 +1,5 @@
 package io.github.nickacpt.minecraftscreenshotendpoint.queue
 
-import io.github.nickacpt.minecraftscreenshotendpoint.mixin.MinecraftClientMixin
 import net.minecraft.client.MinecraftClient
 import java.util.concurrent.ConcurrentLinkedDeque
 
@@ -14,6 +13,9 @@ object ScreenshotQueue {
         queue.add(entry)
     }
 
+    /**
+     * Checks teather the next entry exist a
+     */
     fun getNextEntry(): ScreenshotQueueEntry? {
         return queue.poll().also { it: ScreenshotQueueEntry? ->
             val isTakingScreenshot = it != null
