@@ -4,6 +4,7 @@ import io.github.nickacpt.minecraftscreenshotendpoint.ScreenshotTaskHolder;
 import io.github.nickacpt.minecraftscreenshotendpoint.queue.ScreenshotQueue;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.GameRenderer;
+import net.minecraft.client.render.RenderTickCounter;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -19,13 +20,13 @@ public abstract class GameRendererMixin {
     public abstract boolean isRenderingPanorama();
 
     @Inject(method = "getFov", at = @At("HEAD"), cancellable = true)
-    private void mse$overrideFov(CallbackInfoReturnable<Double> cir) {
+    private void mse$overrideFov(CallbackInfoReturnable<Float> cir) {
         var holder = (ScreenshotTaskHolder) MinecraftClient.getInstance();
         var task = holder.mse$getCurrentScreenshotEntryTask();
 
         if (task != null) {
             var fov = task.getSettings().getFov();
-            cir.setReturnValue(fov);
+            cir.setReturnValue((float) fov);
         }
     }
 
@@ -39,12 +40,12 @@ public abstract class GameRendererMixin {
         }
     }
 
-    @ModifyArg(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/GameRenderer;renderWorld(FJLnet/minecraft/client/util/math/MatrixStack;)V"), index = 0)
-    private float mse$overrideRenderTickDelta(float tickDelta) {
+    @ModifyArg(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/GameRenderer;renderWorld(Lnet/minecraft/client/render/RenderTickCounter;)V"), index = 0)
+    private RenderTickCounter mse$overrideRenderTickDelta(RenderTickCounter renderTickCounter) {
         var holder = (ScreenshotTaskHolder) MinecraftClient.getInstance();
         var task = holder.mse$getCurrentScreenshotEntryTask();
 
-        return task != null ? 1.0f : tickDelta;
+        return task != null ? RenderTickCounter.ONE : renderTickCounter;
     }
 
     @Inject(method = "renderWorld", at = @At("HEAD"))
@@ -72,8 +73,8 @@ public abstract class GameRendererMixin {
 
 
     @Inject(at = @At("HEAD"), method = {
-            "renderFloatingItem",
-            "renderNausea",
+            //"renderFloatingItem",
+            //"renderNausea",
             "renderHand",
     }, cancellable = true)
     public void mse$cancelRenderingSomeThings(CallbackInfo ci) {

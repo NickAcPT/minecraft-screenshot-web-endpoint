@@ -9,12 +9,18 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.future.await
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import net.minecraft.client.MinecraftClient
-import net.minecraft.client.gl.Framebuffer
 import net.minecraft.client.texture.NativeImage
+import net.minecraft.client.util.ScreenshotRecorder
+import org.apache.commons.io.FileSystem
+import java.io.ByteArrayOutputStream
+import java.nio.channels.Channels
+import java.nio.file.Files
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executor
 
 data class ScreenshotData(
@@ -32,7 +38,7 @@ data class ScreenshotData(
         check(height > 0) { "Height must be greater than 0" }
         check(fov > 0) { "Fov must be greater than 0" }
 
-        val max = RenderSystem.maxSupportedTextureSize()
+        val max = RenderSystem.getDevice().maxTextureSize
 
         check(width <= max) { "Width must be less than or equal to $max" }
         check(height <= max) { "Height must be less than or equal to $max" }
@@ -77,7 +83,7 @@ fun Application.screenshotRoute() {
 val ioDispatcher = Dispatchers.IO
 
 val renderCallDispatcher = Executor {
-    RenderSystem.recordRenderCall {
+    MinecraftClient.getInstance().execute {
         it.run()
     }
 }.asCoroutineDispatcher()
@@ -94,25 +100,26 @@ private suspend fun getScreenshot(data: ScreenshotData): ByteArray {
 
     entry.await()
 
-    return takeScreenshot(entry.framebuffer)
+    return takeScreenshot(entry)
 }
 
-suspend fun takeScreenshot(framebuffer: Framebuffer): ByteArray {
-    val w = framebuffer.textureWidth
-    val h = framebuffer.textureHeight
-    val nativeImage = NativeImage(w, h, false)
+suspend fun takeScreenshot(entry: ScreenshotQueueEntry): ByteArray {
+    val framebuffer = entry.framebuffer
+
+    val future = CompletableFuture<ByteArray>()
 
     withContext(renderCallDispatcher) {
-        RenderSystem.bindTexture(framebuffer.colorAttachment)
-        nativeImage.loadFromTextureImage(0, true)
-        framebuffer.delete()
+        ScreenshotRecorder.takeScreenshot(framebuffer) { nativeImage ->
+            val byteArr = ByteArrayOutputStream()
+            Channels.newChannel(byteArr).use { channel ->
+                nativeImage.write(channel)
+            }
+
+            future.complete(byteArr.use { it.toByteArray() } )
+        }
     }
 
-    nativeImage.mirrorVertically()
-
-    return nativeImage.use {
-        it.bytes
-    }
+    return future.await()
 }
 
 

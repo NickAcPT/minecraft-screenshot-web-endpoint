@@ -36,7 +36,7 @@ fun Application.teleportRoute() {
                             if (it.abilities.allowFlying) it.abilities.flying = true
                         }?.sendAbilitiesUpdate()
 
-                        playerEntity?.teleport(world, x, y, z, emptySet(), yaw, pitch)
+                        playerEntity?.teleport(world, x, y, z, emptySet(), yaw, pitch, false)
                     }
                 };
 

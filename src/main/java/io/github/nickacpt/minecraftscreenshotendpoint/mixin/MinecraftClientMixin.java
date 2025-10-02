@@ -40,7 +40,7 @@ public abstract class MinecraftClientMixin implements ScreenshotTaskHolder {
 
         // Update the framebuffer to the new one
         var newFramebuffer = this.getFramebuffer();
-        newFramebuffer.beginWrite(false);
+        //newFramebuffer.beginWrite(false);
 
         // Notify the game about the new framebuffer size
         var window = MinecraftClient.getInstance().getWindow();

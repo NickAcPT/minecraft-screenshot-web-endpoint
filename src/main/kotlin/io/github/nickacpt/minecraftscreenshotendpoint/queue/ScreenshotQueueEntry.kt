@@ -31,7 +31,7 @@ data class ScreenshotQueueEntry(
 }
 
 private fun createFramebuffer(settings: ScreenshotData) =
-    SimpleFramebuffer(settings.width, settings.height, true, MinecraftClient.IS_SYSTEM_MAC)
+    SimpleFramebuffer("Screenshot", settings.width, settings.height, true)
 
 private fun createCameraEntity(settings: ScreenshotData): ClientPlayerEntity {
     val newCameraEntity = MinecraftClient.getInstance().run {
@@ -42,13 +42,17 @@ private fun createCameraEntity(settings: ScreenshotData): ClientPlayerEntity {
     newCameraEntity.yaw = settings.yaw
     newCameraEntity.pitch = settings.pitch
 
-    newCameraEntity.prevYaw = settings.yaw
-    newCameraEntity.prevPitch = settings.pitch
-    newCameraEntity.prevX = settings.x
-    newCameraEntity.prevY = settings.y
-    newCameraEntity.prevZ = settings.z
+    newCameraEntity.lastYaw = settings.yaw
+    newCameraEntity.lastPitch = settings.pitch
+    newCameraEntity.lastX = settings.x
+    newCameraEntity.lastY = settings.y
+    newCameraEntity.lastZ = settings.z
 
-    newCameraEntity.kill()
+    newCameraEntity.setNoGravity(true)
+
+    //newCameraEntity.kill(MinecraftClient.getInstance().server?.spawnWorld)
+
+    //newCameraEntity.kill(MinecraftClient.)
 
     return newCameraEntity
 }

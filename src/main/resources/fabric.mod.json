@@ -13,6 +13,7 @@
 	},
 	"license": "MIT",
 	"environment": "client",
+	"accessWidener": "screenshot.accesswidener",
 	"entrypoints": {
 		"client": [
 			{
@@ -25,7 +26,7 @@
 		"minecraft-screenshot-web-endpoint.mixins.json"
 	],
 	"depends": {
-		"minecraft": "~1.20.4",
+		"minecraft": "~1.21.9",
 		"java": ">=17",
 		"fabric-language-kotlin": ">=1.10.17"
 	}
