@@ -115,6 +115,8 @@ suspend fun takeScreenshot(entry: ScreenshotQueueEntry): ByteArray {
                 nativeImage.write(channel)
             }
 
+            nativeImage.close()
+
             future.complete(byteArr.use { it.toByteArray() } )
         }
     }
