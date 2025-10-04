@@ -25,8 +25,9 @@ dependencies {
     implementation(transitiveInclude("io.ktor:ktor-server-content-negotiation-jvm:$ktor_version"))
     implementation(transitiveInclude("io.ktor:ktor-server-core-jvm:$ktor_version"))
     implementation(transitiveInclude("io.ktor:ktor-serialization-jackson-jvm:$ktor_version"))
-    implementation(transitiveInclude("io.ktor:ktor-server-jetty-jvm:$ktor_version"))
-    implementation(transitiveInclude("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.7.1"))
+    implementation(transitiveInclude("io.ktor:ktor-server-jetty-jakarta:$ktor_version"))
+    implementation(transitiveInclude("io.ktor:ktor-server-cors:$ktor_version"))
+    implementation(transitiveInclude("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.10.2"))
 
     // To change the versions see the gradle.properties file
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
@@ -38,7 +39,7 @@ dependencies {
     configurations.transitiveInclude.resolvedConfiguration.resolvedArtifacts.each { artifact ->
         def name = artifact.id.getComponentIdentifier().displayName
 
-        if (name.contains("ktor") || name.contains("jetty") || name.contains("javax")) {
+        if (name.contains("ktor") || name.contains("jetty") || name.contains("jakarta") || name.contains("javax")) {
             include name
         }
     }
