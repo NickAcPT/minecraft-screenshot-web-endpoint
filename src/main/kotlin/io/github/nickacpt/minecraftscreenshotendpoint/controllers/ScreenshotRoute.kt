@@ -14,14 +14,12 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import net.minecraft.client.MinecraftClient
-import net.minecraft.client.texture.NativeImage
 import net.minecraft.client.util.ScreenshotRecorder
-import org.apache.commons.io.FileSystem
 import java.io.ByteArrayOutputStream
 import java.nio.channels.Channels
-import java.nio.file.Files
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executor
+import kotlin.concurrent.thread
 
 data class ScreenshotData(
     val x: Double,
@@ -110,14 +108,16 @@ suspend fun takeScreenshot(entry: ScreenshotQueueEntry): ByteArray {
 
     withContext(renderCallDispatcher) {
         ScreenshotRecorder.takeScreenshot(framebuffer) { nativeImage ->
-            val byteArr = ByteArrayOutputStream()
-            Channels.newChannel(byteArr).use { channel ->
-                nativeImage.write(channel)
+            thread(start = true) {
+                val byteArr = ByteArrayOutputStream()
+                Channels.newChannel(byteArr).use { channel ->
+                    nativeImage.write(channel)
+                }
+
+                nativeImage.close()
+
+                future.complete(byteArr.use { it.toByteArray() } )
             }
-
-            nativeImage.close()
-
-            future.complete(byteArr.use { it.toByteArray() } )
         }
     }
 
