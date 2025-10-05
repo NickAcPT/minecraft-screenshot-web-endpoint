@@ -1,7 +1,6 @@
 package io.github.nickacpt.minecraftscreenshotendpoint.mixin;
 
 import io.github.nickacpt.minecraftscreenshotendpoint.ScreenshotTaskHolder;
-import io.github.nickacpt.minecraftscreenshotendpoint.queue.ScreenshotQueueEntry;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.util.Window;
 import org.spongepowered.asm.mixin.Mixin;

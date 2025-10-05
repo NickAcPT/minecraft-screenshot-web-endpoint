@@ -16,7 +16,6 @@ public class RenderSystemMixin {
     private static void flipFrame(CallbackInfo ci) {
         if (ScreenshotQueue.INSTANCE.getSkipNextFrameFlip()) {
             ci.cancel();
-            return;
         }
     }
 }
