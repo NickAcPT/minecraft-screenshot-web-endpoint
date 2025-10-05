@@ -2,22 +2,21 @@ package io.github.nickacpt.minecraftscreenshotendpoint.mixin;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import io.github.nickacpt.minecraftscreenshotendpoint.queue.ScreenshotQueue;
-import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Debug;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Debug(export = true)
 @Mixin(RenderSystem.class)
 public class RenderSystemMixin {
 
-    @Redirect(method = "flipFrame", at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFW;glfwSwapBuffers(J)V"), remap = false)
-    private static void flipFrame(long window) {
+    @Inject(method = "flipFrame", at = @At(value = "HEAD"), remap = false, cancellable = true)
+    private static void flipFrame(CallbackInfo ci) {
         if (ScreenshotQueue.INSTANCE.getSkipNextFrameFlip()) {
+            ci.cancel();
             return;
         }
-
-        GLFW.glfwSwapBuffers(window);
     }
 }
