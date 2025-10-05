@@ -37,16 +37,6 @@ public abstract class MinecraftClientMixin implements ScreenshotTaskHolder {
     public void mse$setCurrentScreenshotEntryTask(ScreenshotQueueEntry task) {
         if (mse$currentScreenshotEntryTask == task) return;
         mse$currentScreenshotEntryTask = task;
-
-        // Update the framebuffer to the new one
-        var newFramebuffer = this.getFramebuffer();
-        //newFramebuffer.beginWrite(false);
-
-        // Notify the game about the new framebuffer size
-        var window = MinecraftClient.getInstance().getWindow();
-
-        ((WindowAccessor) (Object) window).invokeOnFramebufferSizeChanged(window.getHandle(), newFramebuffer.textureWidth, newFramebuffer.textureHeight);
-
     }
 
     @Inject(at = @At("HEAD"), method = "getCameraEntity", cancellable = true)
