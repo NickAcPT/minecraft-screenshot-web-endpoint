@@ -90,6 +90,9 @@ private suspend fun getScreenshot(data: ScreenshotData): ByteArray {
     if (MinecraftClient.getInstance()?.world == null) {
         throw IllegalStateException("World is null")
     }
+    if (MinecraftClient.getInstance()?.player == null) {
+        throw IllegalStateException("Player is null")
+    }
 
     val entry = withContext(renderCallDispatcher) {
         ScreenshotQueueEntry(data)

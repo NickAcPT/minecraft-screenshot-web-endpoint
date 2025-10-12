@@ -24,24 +24,26 @@ fun Application.teleportRoute() {
             val player = MinecraftClient.getInstance().player ?: return@get call.respondText("Player not found")
 
             MinecraftClient.getInstance().execute {
-                val teleporter = MinecraftClient.getInstance().server?.let {
+                val teleporter = MinecraftClient.getInstance().server?.let { server ->
                     val world = Identifier.tryParse(level)?.let { id ->
-                        it.getWorld(RegistryKey.of(RegistryKeys.WORLD, id))
+                        server.getWorld(RegistryKey.of(RegistryKeys.WORLD, id))
                     };
 
                     {
-                        val playerEntity = it.playerManager.getPlayer(player.uuid)
+                        val playerEntity = server.playerManager.getPlayer(player.uuid)
 
                         playerEntity?.also {
                             if (it.abilities.allowFlying) it.abilities.flying = true
                         }?.sendAbilitiesUpdate()
 
                         playerEntity?.teleport(world, x, y, z, emptySet(), yaw, pitch, false)
+
+                        Unit
                     }
                 };
 
                 if (teleporter != null) {
-                    teleporter()
+                    MinecraftClient.getInstance().server?.executeSync(teleporter)
                 } else {
                     player.networkHandler?.sendChatCommand(
                         "execute in $level run tp ${player.uuid} $x $y $z $yaw $pitch",
