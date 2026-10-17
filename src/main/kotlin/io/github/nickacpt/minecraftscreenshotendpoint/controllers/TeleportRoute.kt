@@ -3,10 +3,10 @@ package io.github.nickacpt.minecraftscreenshotendpoint.controllers
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import net.minecraft.client.MinecraftClient
-import net.minecraft.registry.RegistryKey
-import net.minecraft.registry.RegistryKeys
-import net.minecraft.util.Identifier
+import net.minecraft.client.Minecraft
+import net.minecraft.core.registries.Registries
+import net.minecraft.resources.Identifier
+import net.minecraft.resources.ResourceKey
 
 fun Application.teleportRoute() {
     routing {
@@ -21,31 +21,31 @@ fun Application.teleportRoute() {
 
             val level = query["level"] ?: "minecraft:overworld"
 
-            val player = MinecraftClient.getInstance().player ?: return@get call.respondText("Player not found")
+            val player = Minecraft.getInstance().player ?: return@get call.respondText("Player not found")
 
-            MinecraftClient.getInstance().execute {
-                val teleporter = MinecraftClient.getInstance().server?.let { server ->
+            Minecraft.getInstance().execute {
+                val teleporter = Minecraft.getInstance().singleplayerServer?.let { server ->
                     val world = Identifier.tryParse(level)?.let { id ->
-                        server.getWorld(RegistryKey.of(RegistryKeys.WORLD, id))
+                        server.getLevel(ResourceKey.create(Registries.DIMENSION, id))
                     };
 
                     {
-                        val playerEntity = server.playerManager.getPlayer(player.uuid)
+                        val playerEntity = server.playerList.getPlayer(player.uuid)
 
                         playerEntity?.also {
-                            if (it.abilities.allowFlying) it.abilities.flying = true
-                        }?.sendAbilitiesUpdate()
+                            if (it.abilities.mayfly) it.abilities.flying = true
+                        }?.onUpdateAbilities()
 
-                        playerEntity?.teleport(world, x, y, z, emptySet(), yaw, pitch, false)
+                        if (world != null) playerEntity?.teleportTo(world, x, y, z, emptySet(), yaw, pitch, false)
 
                         Unit
                     }
                 };
 
                 if (teleporter != null) {
-                    MinecraftClient.getInstance().server?.executeSync(teleporter)
+                    Minecraft.getInstance().singleplayerServer?.executeIfPossible(teleporter)
                 } else {
-                    player.networkHandler?.sendChatCommand(
+                    player.connection?.sendCommand(
                         "execute in $level run tp ${player.uuid} $x $y $z $yaw $pitch",
                     )
                 }

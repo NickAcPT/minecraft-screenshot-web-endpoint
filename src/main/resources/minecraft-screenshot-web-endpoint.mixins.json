@@ -6,12 +6,11 @@
     "defaultRequire": 1
   },
   "client": [
-    "DebugHudMixin",
+    "CameraMixin",
+    "DebugCrosshairRendererMixin",
     "GameOptionsMixin",
     "GameRendererMixin",
-    "LightmapTextureManagerMixin",
     "MinecraftClientMixin",
-    "RenderSystemMixin",
     "WindowAccessor",
     "WindowMixin"
   ]

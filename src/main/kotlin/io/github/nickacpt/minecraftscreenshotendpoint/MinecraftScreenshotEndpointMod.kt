@@ -9,11 +9,12 @@ import io.ktor.server.engine.*
 import io.ktor.server.jetty.jakarta.Jetty
 import io.ktor.server.plugins.cors.routing.CORS
 import net.fabricmc.api.ClientModInitializer
+import org.eclipse.jetty.util.thread.QueuedThreadPool
 import kotlin.concurrent.thread
 
 object MinecraftScreenshotEndpointMod : ClientModInitializer {
     override fun onInitializeClient() {
-        thread {
+        thread(isDaemon = true) {
             initializeKtor()
         }
     }
@@ -24,7 +25,14 @@ object MinecraftScreenshotEndpointMod : ClientModInitializer {
     }
 
     private fun initializeKtor() {
-        embeddedServer(Jetty, port = 36210, host = "127.0.0.1", module = Application::module)
+        embeddedServer(Jetty, configure = {
+            connector {
+                host = "127.0.0.1"
+                port = 36210
+            }
+            // Daemon threads so the HTTP server doesn't keep the JVM alive after the game closes
+            configureServer = { (threadPool as QueuedThreadPool).isDaemon = true }
+        }, module = Application::module)
             .start(wait = true)
     }
 }

@@ -26,8 +26,8 @@
 		"minecraft-screenshot-web-endpoint.mixins.json"
 	],
 	"depends": {
-		"minecraft": "~1.21.9",
-		"java": ">=22",
-		"fabric-language-kotlin": ">=1.13.6"
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-language-kotlin": ">=1.14.2"
 	}
 }

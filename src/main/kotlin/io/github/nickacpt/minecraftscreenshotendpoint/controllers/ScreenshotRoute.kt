@@ -13,8 +13,8 @@ import kotlinx.coroutines.future.await
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.util.ScreenshotRecorder
+import net.minecraft.client.Minecraft
+import net.minecraft.client.Screenshot
 import java.io.ByteArrayOutputStream
 import java.nio.channels.Channels
 import java.util.concurrent.CompletableFuture
@@ -36,7 +36,7 @@ data class ScreenshotData(
         check(height > 0) { "Height must be greater than 0" }
         check(fov > 0) { "Fov must be greater than 0" }
 
-        val max = RenderSystem.getDevice().maxTextureSize
+        val max = RenderSystem.getDevice().deviceInfo.limits().maxTextureSize()
 
         check(width <= max) { "Width must be less than or equal to $max" }
         check(height <= max) { "Height must be less than or equal to $max" }
@@ -81,16 +81,16 @@ fun Application.screenshotRoute() {
 val ioDispatcher = Dispatchers.IO
 
 val renderCallDispatcher = Executor {
-    MinecraftClient.getInstance().execute {
+    Minecraft.getInstance().execute {
         it.run()
     }
 }.asCoroutineDispatcher()
 
 private suspend fun getScreenshot(data: ScreenshotData): ByteArray {
-    if (MinecraftClient.getInstance()?.world == null) {
+    if (Minecraft.getInstance()?.level == null) {
         throw IllegalStateException("World is null")
     }
-    if (MinecraftClient.getInstance()?.player == null) {
+    if (Minecraft.getInstance()?.player == null) {
         throw IllegalStateException("Player is null")
     }
 
@@ -110,11 +110,11 @@ suspend fun takeScreenshot(entry: ScreenshotQueueEntry): ByteArray {
     val future = CompletableFuture<ByteArray>()
 
     withContext(renderCallDispatcher) {
-        ScreenshotRecorder.takeScreenshot(framebuffer) { nativeImage ->
+        Screenshot.takeScreenshot(framebuffer) { nativeImage ->
             thread(start = true) {
                 val byteArr = ByteArrayOutputStream()
                 Channels.newChannel(byteArr).use { channel ->
-                    nativeImage.write(channel)
+                    nativeImage.writeToChannel(channel)
                 }
 
                 nativeImage.close()

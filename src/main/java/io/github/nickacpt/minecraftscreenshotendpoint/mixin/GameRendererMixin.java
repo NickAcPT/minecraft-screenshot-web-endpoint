@@ -1,85 +1,23 @@
 package io.github.nickacpt.minecraftscreenshotendpoint.mixin;
 
 import io.github.nickacpt.minecraftscreenshotendpoint.ScreenshotTaskHolder;
-import io.github.nickacpt.minecraftscreenshotendpoint.queue.ScreenshotQueue;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.GameRenderer;
-import net.minecraft.client.render.RenderTickCounter;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.GameRenderer;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyArg;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(GameRenderer.class)
 public abstract class GameRendererMixin {
 
-    @Shadow
-    public abstract boolean isRenderingPanorama();
-
-    @Inject(method = "getFov", at = @At("HEAD"), cancellable = true)
-    private void mse$overrideFov(CallbackInfoReturnable<Float> cir) {
-        var holder = (ScreenshotTaskHolder) MinecraftClient.getInstance();
-        var task = holder.mse$getCurrentScreenshotEntryTask();
-
-        if (task != null) {
-            var fov = task.getSettings().getFov();
-            cir.setReturnValue((float) fov);
-        }
-    }
-
     @Inject(method = "shouldRenderBlockOutline", at = @At("HEAD"), cancellable = true)
     private void mse$overrideshouldRenderBlockOutline(CallbackInfoReturnable<Boolean> cir) {
-        var holder = (ScreenshotTaskHolder) MinecraftClient.getInstance();
+        var holder = (ScreenshotTaskHolder) Minecraft.getInstance();
         var task = holder.mse$getCurrentScreenshotEntryTask();
 
         if (task != null) {
             cir.setReturnValue(false);
-        }
-    }
-
-    @ModifyArg(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/GameRenderer;renderWorld(Lnet/minecraft/client/render/RenderTickCounter;)V"), index = 0)
-    private RenderTickCounter mse$overrideRenderTickDelta(RenderTickCounter renderTickCounter) {
-        var holder = (ScreenshotTaskHolder) MinecraftClient.getInstance();
-        var task = holder.mse$getCurrentScreenshotEntryTask();
-
-        return task != null ? RenderTickCounter.ONE : renderTickCounter;
-    }
-
-    @Inject(method = "renderWorld", at = @At("HEAD"))
-    private void mse$renderWorldStart(CallbackInfo ci) {
-        var holder = (ScreenshotTaskHolder) MinecraftClient.getInstance();
-        var task = holder.mse$getCurrentScreenshotEntryTask();
-
-        if (task == null) {
-            var nextTask = ScreenshotQueue.INSTANCE.getNextEntry();
-            holder.mse$setCurrentScreenshotEntryTask(nextTask);
-        }
-    }
-
-    @Inject(method = "renderWorld", at = @At("TAIL"))
-    private void mse$renderWorldEnd(CallbackInfo ci) {
-        var holder = (ScreenshotTaskHolder) MinecraftClient.getInstance();
-
-        var task = holder.mse$getCurrentScreenshotEntryTask();
-
-        if (task != null) {
-            task.notifyDone();
-            holder.mse$setCurrentScreenshotEntryTask(null);
-        }
-    }
-
-
-    @Inject(at = @At("HEAD"), method = {
-            //"renderFloatingItem",
-            //"renderNausea",
-            "renderHand",
-    }, cancellable = true)
-    public void mse$cancelRenderingSomeThings(CallbackInfo ci) {
-        if (isRenderingPanorama()) {
-            ci.cancel();
         }
     }
 }

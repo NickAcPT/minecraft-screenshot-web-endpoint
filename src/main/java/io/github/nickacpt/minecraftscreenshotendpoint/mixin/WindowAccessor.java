@@ -1,6 +1,6 @@
 package io.github.nickacpt.minecraftscreenshotendpoint.mixin;
 
-import net.minecraft.client.util.Window;
+import com.mojang.blaze3d.platform.Window;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
@@ -8,5 +8,5 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 public interface WindowAccessor {
 
     @Invoker
-    void invokeOnFramebufferSizeChanged(long var1, int var3, int var4);
+    void invokeOnFramebufferResize(int width, int height);
 }
