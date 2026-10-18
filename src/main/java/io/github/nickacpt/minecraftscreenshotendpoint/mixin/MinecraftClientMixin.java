@@ -1,6 +1,7 @@
 package io.github.nickacpt.minecraftscreenshotendpoint.mixin;
 
 import com.mojang.blaze3d.pipeline.RenderTarget;
+import io.github.nickacpt.minecraftscreenshotendpoint.MinecraftScreenshotEndpointMod;
 import io.github.nickacpt.minecraftscreenshotendpoint.ScreenshotTaskHolder;
 import io.github.nickacpt.minecraftscreenshotendpoint.queue.ScreenshotQueue;
 import io.github.nickacpt.minecraftscreenshotendpoint.queue.ScreenshotQueueEntry;
@@ -31,6 +32,11 @@ public abstract class MinecraftClientMixin implements ScreenshotTaskHolder {
 
     @Unique
     private ScreenshotQueueEntry mse$currentScreenshotEntryTask;
+
+    @Inject(method = "close", at = @At("HEAD"))
+    private void mse$stopServer(CallbackInfo ci) {
+        MinecraftScreenshotEndpointMod.stopServer();
+    }
 
     @Override
     public @Nullable ScreenshotQueueEntry mse$getCurrentScreenshotEntryTask() {
