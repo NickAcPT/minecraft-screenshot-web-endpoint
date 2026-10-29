@@ -8,9 +8,14 @@ import io.github.nickacpt.minecraftscreenshotendpoint.queue.ScreenshotQueueEntry
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.TextureFilteringMethod;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.state.GameRenderState;
+import net.minecraft.client.renderer.state.OptionsRenderState;
+import net.minecraft.client.renderer.state.level.LevelRenderState;
 import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
@@ -25,6 +30,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class MinecraftClientMixin implements ScreenshotTaskHolder {
 
     @Shadow @Final public GameRenderer gameRenderer;
+
+    @Shadow @Final public LevelRenderer levelRenderer;
 
     @Shadow public @Nullable LocalPlayer player;
 
@@ -76,7 +83,9 @@ public abstract class MinecraftClientMixin implements ScreenshotTaskHolder {
             // Enabled after the camera update so panoramic state captures the screenshot camera's direction
             camera.enablePanoramicMode();
             this.gameRenderer.extract(DeltaTracker.ONE, true);
+            mse$updateGlobalSettingsUniform();
             this.gameRenderer.renderLevel();
+            mse$rotatePerFrameBuffers();
 
             task.getFramebuffer().copyColorFrom(mainTarget);
         } finally {
@@ -87,5 +96,40 @@ public abstract class MinecraftClientMixin implements ScreenshotTaskHolder {
         }
 
         task.notifyDone();
+    }
+
+    /**
+     * Vanilla only writes the Globals UBO (camera block pos/offset, screen size) in {@code GameRenderer#render},
+     * which the screenshot pass skips. Without this, shaders reading it (e.g. the terrain shader used by
+     * Axiom's chunk render overrider) would use the previous frame's player camera. The next regular frame
+     * rewrites it, so no restore is needed.
+     */
+    @Unique
+    private void mse$updateGlobalSettingsUniform() {
+        GameRenderState state = this.gameRenderer.gameRenderState();
+        OptionsRenderState options = state.optionsRenderState;
+        LevelRenderState levelState = state.levelRenderState;
+
+        ((GameRendererAccessor) this.gameRenderer).getGlobalSettingsUniform().update(
+                state.windowRenderState.width,
+                state.windowRenderState.height,
+                options.glintStrength,
+                state.shouldRenderLevel ? levelState.gameTime : 0L,
+                state.shouldRenderLevel ? levelState.worldPartialTicks : 0.0F,
+                options.menuBackgroundBlurriness,
+                levelState.cameraRenderState.pos,
+                options.textureFiltering == TextureFilteringMethod.RGSS
+        );
+    }
+
+    /**
+     * The cloud and fog UBOs are unsynchronized mapped ring buffers that vanilla rotates once per frame.
+     * Without rotating after the screenshot pass, the regular frame overwrites the same buffer before the GPU
+     * executes the screenshot's draws, so the screenshot would use the player's cloud height and fog.
+     */
+    @Unique
+    private void mse$rotatePerFrameBuffers() {
+        this.levelRenderer.cloudRenderer().endFrame();
+        ((GameRendererAccessor) this.gameRenderer).getFogRenderer().endFrame();
     }
 }

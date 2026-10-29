@@ -7,8 +7,10 @@
   },
   "client": [
     "CameraMixin",
+    "compat.AxiomEditorUIMixin",
     "DebugCrosshairRendererMixin",
     "GameOptionsMixin",
+    "GameRendererAccessor",
     "GameRendererMixin",
     "MinecraftClientMixin",
     "WindowAccessor",
