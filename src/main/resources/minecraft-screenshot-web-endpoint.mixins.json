@@ -12,6 +12,7 @@
     "GameOptionsMixin",
     "GameRendererAccessor",
     "GameRendererMixin",
+    "LevelRendererMixin",
     "MinecraftClientMixin",
     "WindowAccessor",
     "WindowMixin"

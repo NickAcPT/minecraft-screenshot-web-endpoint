@@ -3,10 +3,13 @@ package io.github.nickacpt.minecraftscreenshotendpoint.controllers
 import com.mojang.blaze3d.systems.RenderSystem
 import io.github.nickacpt.minecraftscreenshotendpoint.queue.ScreenshotQueue
 import io.github.nickacpt.minecraftscreenshotendpoint.queue.ScreenshotQueueEntry
+import io.github.nickacpt.minecraftscreenshotendpoint.render.parseBlockOverrides
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap
+import it.unimi.dsi.fastutil.longs.Long2ObjectMaps
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.future.await
@@ -15,6 +18,7 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import net.minecraft.client.Minecraft
 import net.minecraft.client.Screenshot
+import net.minecraft.world.level.block.state.BlockState
 import java.io.ByteArrayOutputStream
 import java.nio.channels.Channels
 import java.util.concurrent.CompletableFuture
@@ -29,7 +33,9 @@ data class ScreenshotData(
     val yaw: Float,
     val width: Int,
     val height: Int,
-    val fov: Double
+    val fov: Double,
+    /** Render-only block state overrides for this screenshot, keyed by `BlockPos.asLong`. See [screenshotRoute]. */
+    val blockOverrides: Long2ObjectMap<BlockState> = Long2ObjectMaps.emptyMap(),
 ) {
     init {
         check(width > 0) { "Width must be greater than 0" }
@@ -43,7 +49,24 @@ data class ScreenshotData(
     }
 }
 
+/** A request failure with the HTTP status to report; its message is returned to the client as-is. */
+class ScreenshotRequestException(val status: HttpStatusCode, message: String) : RuntimeException(message)
 
+
+/**
+ * `GET /screenshot/` renders one PNG from the camera at `x,y,z` (`yaw`, `pitch`, vertical `fov`) at `width` x `height`.
+ *
+ * `block` (repeatable) renders block states in this screenshot only; the world is never changed:
+ * - `block=x,y,z,<blockstate>` overrides one position.
+ * - `block=x1,y1,z1,x2,y2,z2,<blockstate>` overrides the inclusive box between two corners (any corner order).
+ * - `<blockstate>` is command syntax (`stone`, `minecraft:oak_log[axis=y]`, `air` to hide a block) and may contain commas.
+ * Later values win on overlap. At most [MAX_BLOCK_OVERRIDE_POSITIONS] positions in total (box volumes summed) and
+ * [MAX_BLOCK_OVERRIDE_SECTIONS] affected chunk sections are allowed, otherwise 400. Only sections in the render view
+ * area are drawn with overrides. Block entity renderers of the real world still draw at overridden positions, and an
+ * override whose block needs a block entity renderer (chest, sign, ...) is drawn without it. Returns 501 while Sodium is loaded.
+ *
+ * Errors: 400 for malformed parameters or exceeded caps, 501 for unsupported features, 500 otherwise.
+ */
 fun Application.screenshotRoute() {
     val semaphore = Semaphore(1)
 
@@ -59,7 +82,8 @@ fun Application.screenshotRoute() {
                     query["yaw"]?.toFloat() ?: 0.0f,
                     query["width"]?.toInt() ?: 0,
                     query["height"]?.toInt() ?: 0,
-                    query["fov"]?.toDouble() ?: 0.0
+                    query["fov"]?.toDouble() ?: 0.0,
+                    blockOverrides = parseBlockOverrides(query.getAll("block").orEmpty())
                 )
 
                 call.respondBytes {
@@ -70,8 +94,9 @@ fun Application.screenshotRoute() {
                     }
                 }
             }.onFailure {
-                call.response.status(HttpStatusCode.InternalServerError)
-                call.respond(it.stackTraceToString())
+                val status = (it as? ScreenshotRequestException)?.status ?: HttpStatusCode.InternalServerError
+                call.response.status(status)
+                call.respond(if (it is ScreenshotRequestException) it.message.orEmpty() else it.stackTraceToString())
             }
         }
     }

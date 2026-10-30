@@ -5,6 +5,7 @@ import io.github.nickacpt.minecraftscreenshotendpoint.MinecraftScreenshotEndpoin
 import io.github.nickacpt.minecraftscreenshotendpoint.ScreenshotTaskHolder;
 import io.github.nickacpt.minecraftscreenshotendpoint.queue.ScreenshotQueue;
 import io.github.nickacpt.minecraftscreenshotendpoint.queue.ScreenshotQueueEntry;
+import io.github.nickacpt.minecraftscreenshotendpoint.render.ScreenshotBlockOverrides;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -84,7 +85,14 @@ public abstract class MinecraftClientMixin implements ScreenshotTaskHolder {
             camera.enablePanoramicMode();
             this.gameRenderer.extract(DeltaTracker.ONE, true);
             mse$updateGlobalSettingsUniform();
-            this.gameRenderer.renderLevel();
+            // Overrides exist only for this level render; they are freed before the regular frame can draw.
+            ScreenshotBlockOverrides.Session overrides = null;
+            try {
+                overrides = ScreenshotBlockOverrides.begin(camera.position(), task.getSettings().getBlockOverrides());
+                this.gameRenderer.renderLevel();
+            } finally {
+                ScreenshotBlockOverrides.end(overrides);
+            }
             mse$rotatePerFrameBuffers();
 
             task.getFramebuffer().copyColorFrom(mainTarget);
