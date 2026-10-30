@@ -4,6 +4,9 @@ import com.mojang.blaze3d.systems.RenderSystem
 import io.github.nickacpt.minecraftscreenshotendpoint.queue.ScreenshotQueue
 import io.github.nickacpt.minecraftscreenshotendpoint.queue.ScreenshotQueueEntry
 import io.github.nickacpt.minecraftscreenshotendpoint.render.parseBlockOverrides
+import io.github.nickacpt.minecraftscreenshotendpoint.render.ScreenshotStencil
+import io.github.nickacpt.minecraftscreenshotendpoint.render.StencilRect
+import io.github.nickacpt.minecraftscreenshotendpoint.render.parseStencils
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
@@ -36,6 +39,8 @@ data class ScreenshotData(
     val fov: Double,
     /** Render-only block state overrides for this screenshot, keyed by `BlockPos.asLong`. See [screenshotRoute]. */
     val blockOverrides: Long2ObjectMap<BlockState> = Long2ObjectMaps.emptyMap(),
+    /** Stencil rects in screenshot pixels, already clamped to the image. Empty means no stencil. See [screenshotRoute]. */
+    val stencils: List<StencilRect> = emptyList(),
 ) {
     init {
         check(width > 0) { "Width must be greater than 0" }
@@ -65,6 +70,11 @@ class ScreenshotRequestException(val status: HttpStatusCode, message: String) : 
  * area are drawn with overrides. Block entity renderers of the real world still draw at overridden positions, and an
  * override whose block needs a block entity renderer (chest, sign, ...) is drawn without it. Returns 501 while Sodium is loaded.
  *
+ * `stencil=x,y,w,h` (repeatable) restricts rendering to the union of the rects; the image keeps its full size and camera
+ * projection, and pixels outside every rect are fully transparent. Rects are clamped to the image; a malformed value, or
+ * rects that do not overlap the image at all, return 400. GPU work is limited to the bounding box of the rects, so
+ * pixels inside that box but outside every rect are still drawn and then made transparent. Without `stencil` nothing changes.
+ *
  * Errors: 400 for malformed parameters or exceeded caps, 501 for unsupported features, 500 otherwise.
  */
 fun Application.screenshotRoute() {
@@ -74,16 +84,19 @@ fun Application.screenshotRoute() {
         get("/screenshot/") {
             runCatching {
                 val query = call.request.queryParameters
+                val width = query["width"]?.toInt() ?: 0
+                val height = query["height"]?.toInt() ?: 0
                 val data = ScreenshotData(
                     query["x"]?.toDouble() ?: 0.0,
                     query["y"]?.toDouble() ?: 0.0,
                     query["z"]?.toDouble() ?: 0.0,
                     query["pitch"]?.toFloat() ?: 0.0f,
                     query["yaw"]?.toFloat() ?: 0.0f,
-                    query["width"]?.toInt() ?: 0,
-                    query["height"]?.toInt() ?: 0,
+                    width,
+                    height,
                     query["fov"]?.toDouble() ?: 0.0,
-                    blockOverrides = parseBlockOverrides(query.getAll("block").orEmpty())
+                    blockOverrides = parseBlockOverrides(query.getAll("block").orEmpty()),
+                    stencils = parseStencils(query.getAll("stencil").orEmpty(), width, height),
                 )
 
                 call.respondBytes {
@@ -137,6 +150,9 @@ suspend fun takeScreenshot(entry: ScreenshotQueueEntry): ByteArray {
     withContext(renderCallDispatcher) {
         Screenshot.takeScreenshot(framebuffer) { nativeImage ->
             thread(start = true) {
+                if (entry.settings.stencils.isNotEmpty()) {
+                    ScreenshotStencil.applyAlpha(nativeImage, entry.settings.stencils)
+                }
                 val byteArr = ByteArrayOutputStream()
                 Channels.newChannel(byteArr).use { channel ->
                     nativeImage.writeToChannel(channel)

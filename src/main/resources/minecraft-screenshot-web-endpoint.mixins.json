@@ -9,6 +9,7 @@
     "CameraMixin",
     "compat.AxiomEditorUIMixin",
     "DebugCrosshairRendererMixin",
+    "FrontendCommandEncoderMixin",
     "GameOptionsMixin",
     "GameRendererAccessor",
     "GameRendererMixin",

@@ -6,6 +6,7 @@ import io.github.nickacpt.minecraftscreenshotendpoint.ScreenshotTaskHolder;
 import io.github.nickacpt.minecraftscreenshotendpoint.queue.ScreenshotQueue;
 import io.github.nickacpt.minecraftscreenshotendpoint.queue.ScreenshotQueueEntry;
 import io.github.nickacpt.minecraftscreenshotendpoint.render.ScreenshotBlockOverrides;
+import io.github.nickacpt.minecraftscreenshotendpoint.render.ScreenshotStencil;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -89,8 +90,10 @@ public abstract class MinecraftClientMixin implements ScreenshotTaskHolder {
             ScreenshotBlockOverrides.Session overrides = null;
             try {
                 overrides = ScreenshotBlockOverrides.begin(camera.position(), task.getSettings().getBlockOverrides());
+                ScreenshotStencil.begin(mainTarget, task.getSettings().getStencils(), mainTarget.height);
                 this.gameRenderer.renderLevel();
             } finally {
+                ScreenshotStencil.end();
                 ScreenshotBlockOverrides.end(overrides);
             }
             mse$rotatePerFrameBuffers();
