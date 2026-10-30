@@ -22,6 +22,16 @@ loom {
     accessWidenerPath = file("src/main/resources/screenshot.accesswidener")
 }
 
+repositories {
+    maven {
+        name = "Modrinth"
+        url = "https://api.modrinth.com/maven"
+        content {
+            includeGroup "maven.modrinth"
+        }
+    }
+}
+
 dependencies {
     implementation(transitiveInclude("io.ktor:ktor-server-content-negotiation-jvm:$ktor_version"))
     implementation(transitiveInclude("io.ktor:ktor-server-core-jvm:$ktor_version"))
@@ -35,6 +45,9 @@ dependencies {
     implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
     implementation "net.fabricmc:fabric-language-kotlin:${project.fabric_kotlin_version}"
+
+    // Sodium is optional: its mixins only apply when it is loaded (see ScreenshotMixinPlugin)
+    compileOnly "maven.modrinth:AANobbMI:mc26.3-0.9.3-beta.1-fabric"
 
     configurations.transitiveInclude.resolvedConfiguration.resolvedArtifacts.each { artifact ->
         def name = artifact.id.getComponentIdentifier().displayName

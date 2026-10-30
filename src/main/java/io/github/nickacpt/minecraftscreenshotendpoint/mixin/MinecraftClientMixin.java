@@ -84,12 +84,13 @@ public abstract class MinecraftClientMixin implements ScreenshotTaskHolder {
             this.gameRenderer.update(DeltaTracker.ONE);
             // Enabled after the camera update so panoramic state captures the screenshot camera's direction
             camera.enablePanoramicMode();
-            this.gameRenderer.extract(DeltaTracker.ONE, true);
-            mse$updateGlobalSettingsUniform();
-            // Overrides exist only for this level render; they are freed before the regular frame can draw.
-            ScreenshotBlockOverrides.Session overrides = null;
+            // Overrides cover this screenshot's extraction and draw and are released before the regular frame runs.
+            // They must be active before extract: Sodium compiles and selects terrain there.
+            AutoCloseable overrides = null;
             try {
                 overrides = ScreenshotBlockOverrides.begin(camera.position(), task.getSettings().getBlockOverrides());
+                this.gameRenderer.extract(DeltaTracker.ONE, true);
+                mse$updateGlobalSettingsUniform();
                 ScreenshotStencil.begin(mainTarget, task.getSettings().getStencils(), mainTarget.height);
                 this.gameRenderer.renderLevel();
             } finally {

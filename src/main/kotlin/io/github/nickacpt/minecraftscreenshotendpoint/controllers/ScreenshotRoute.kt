@@ -68,14 +68,14 @@ class ScreenshotRequestException(val status: HttpStatusCode, message: String) : 
  * Later values win on overlap. At most [MAX_BLOCK_OVERRIDE_POSITIONS] positions in total (box volumes summed) and
  * [MAX_BLOCK_OVERRIDE_SECTIONS] affected chunk sections are allowed, otherwise 400. Only sections in the render view
  * area are drawn with overrides. Block entity renderers of the real world still draw at overridden positions, and an
- * override whose block needs a block entity renderer (chest, sign, ...) is drawn without it. Returns 501 while Sodium is loaded.
+ * override whose block needs a block entity renderer (chest, sign, ...) is drawn without it. Works with or without Sodium.
  *
  * `stencil=x,y,w,h` (repeatable) restricts rendering to the union of the rects; the image keeps its full size and camera
  * projection, and pixels outside every rect are fully transparent. Rects are clamped to the image; a malformed value, or
  * rects that do not overlap the image at all, return 400. GPU work is limited to the bounding box of the rects, so
  * pixels inside that box but outside every rect are still drawn and then made transparent. Without `stencil` nothing changes.
  *
- * Errors: 400 for malformed parameters or exceeded caps, 501 for unsupported features, 500 otherwise.
+ * Errors: 400 for malformed parameters or exceeded caps, 500 otherwise.
  */
 fun Application.screenshotRoute() {
     val semaphore = Semaphore(1)

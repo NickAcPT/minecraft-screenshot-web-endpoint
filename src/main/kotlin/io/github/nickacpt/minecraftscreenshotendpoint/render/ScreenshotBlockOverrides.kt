@@ -2,6 +2,7 @@ package io.github.nickacpt.minecraftscreenshotendpoint.render
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException
 import io.github.nickacpt.minecraftscreenshotendpoint.controllers.ScreenshotRequestException
+import io.github.nickacpt.minecraftscreenshotendpoint.render.sodium.SodiumScreenshotBridge
 import io.ktor.http.HttpStatusCode
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
@@ -46,16 +47,10 @@ private const val MAX_COORDINATE = 30_000_000
  * given in any order). The form is chosen by whether the 4th to 6th tokens are integers; block states may contain
  * commas inside their property brackets. Later values overwrite earlier positions.
  *
- * @throws ScreenshotRequestException 400 for malformed values or exceeded caps, 501 when Sodium is loaded
+ * @throws ScreenshotRequestException 400 for malformed values or exceeded caps
  */
 fun parseBlockOverrides(params: List<String>): Long2ObjectMap<BlockState> {
     if (params.isEmpty()) return Long2ObjectOpenHashMap()
-    if (FabricLoader.getInstance().isModLoaded("sodium")) {
-        throw ScreenshotRequestException(
-            HttpStatusCode.NotImplemented,
-            "block overrides are not supported while Sodium is loaded"
-        )
-    }
 
     val level = Minecraft.getInstance().level ?: throw IllegalStateException("World is null")
     val blocks = level.registryAccess().lookupOrThrow(Registries.BLOCK)
@@ -140,8 +135,10 @@ private fun badRequest(message: String) = ScreenshotRequestException(HttpStatusC
 /**
  * Render-only block overrides for the screenshot pass.
  *
- * Overridden sections are recompiled into a private [SectionRenderDispatcher] whose regions read the overrides,
- * and the level renderer draws those meshes in place of the real ones for the duration of the pass. The real
+ * Without Sodium, overridden sections are recompiled into a private [SectionRenderDispatcher] whose regions read
+ * the overrides, and the level renderer draws those meshes in place of the real ones for the duration of the pass.
+ * With Sodium, the terrain renderer is swapped for a private one fed by the overridden chunk data (see
+ * [SodiumScreenshotBridge]). In both cases the real
  * [net.minecraft.world.level.Level] data, block entities, lighting, collision and the regular section meshes are
  * never touched, so the regular frames never observe the overrides.
  *
@@ -163,8 +160,19 @@ object ScreenshotBlockOverrides {
      * override. Must be paired with [end] in a `finally` around the level render.
      */
     @JvmStatic
-    fun begin(cameraPos: Vec3, overrides: Long2ObjectMap<BlockState>): Session? {
+    fun begin(cameraPos: Vec3, overrides: Long2ObjectMap<BlockState>): AutoCloseable? {
         if (overrides.isEmpty()) return null
+        if (FabricLoader.getInstance().isModLoaded("sodium")) return SodiumScreenshotBridge.begin(overrides)
+        return beginVanilla(cameraPos, overrides)
+    }
+
+    /** Ends a pass started by [begin]. Closing the returned session restores the regular terrain. */
+    @JvmStatic
+    fun end(session: AutoCloseable?) {
+        session?.close()
+    }
+
+    private fun beginVanilla(cameraPos: Vec3, overrides: Long2ObjectMap<BlockState>): Session? {
 
         val minecraft = Minecraft.getInstance()
         val level = minecraft.level ?: return null
@@ -220,10 +228,8 @@ object ScreenshotBlockOverrides {
         return Session(overrideDispatcher, regularSections, compiled, meshes).also { active = it }
     }
 
-    /** Ends an override session: stops drawing override meshes and frees their GPU allocations. */
-    @JvmStatic
-    fun end(session: Session?) {
-        if (session == null) return
+    /** Ends a vanilla override session: stops drawing override meshes and frees their GPU allocations. */
+    private fun endVanilla(session: Session) {
         if (active === session) active = null
         session.overrideSections.values.forEach { it.reset() }
     }
@@ -298,7 +304,9 @@ object ScreenshotBlockOverrides {
         internal val regularSections: List<SectionRenderDispatcher.RenderSection>,
         internal val overrideSections: Long2ObjectMap<SectionRenderDispatcher.RenderSection>,
         internal val overrideMeshes: Set<SectionMesh>,
-    )
+    ) : AutoCloseable {
+        override fun close() = endVanilla(this)
+    }
 }
 
 /**
